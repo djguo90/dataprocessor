@@ -1,0 +1,907 @@
+from typing import Any, List, Optional, Union, Tuple, Callable, Iterable, Generator
+from functools import lru_cache
+from dataclasses import dataclass
+import glob
+import json
+from pathlib import Path
+import openpyxl
+from openpyxl.styles import Font
+import tqdm
+import string
+from functools import wraps
+from collections import deque
+"""
+1. 删除字段
+2. 重命名字段
+3. 内部根据字段去重
+4. 外部根据字段去重
+"""
+@dataclass
+class PathStep:
+    key: str
+    mode: str  # "dict" 普通字段, "all" 列表所有元素 key[], "indices" 指定下标 key[0,1]
+    indices: Optional[List[int]] = None
+
+
+def _parse_path(path: str) -> List[PathStep]:
+    """
+    将路径字符串解析为 PathStep 列表。
+    支持：
+      .key1.key2.key3[].key4
+      .key1.key2.key3[0,1].key4
+      .key1.key2.key3[-1,-2].key4
+    """
+    path = path.strip()
+    # 去掉前导的点
+    while path.startswith("."):
+        path = path[1:]
+
+    if not path:
+        return []
+
+    raw_parts = [p.strip() for p in path.split(".") if p.strip()]
+
+    steps: List[PathStep] = []
+    for part in raw_parts:
+        part = part.strip()
+        # 通配所有元素 key[]
+        if part.endswith("[]"):
+            key = part[:-2].strip()
+            steps.append(PathStep(key=key, mode="all"))
+            continue
+
+        # 指定下标 key[0,1,-1]
+        if "[" in part and part.endswith("]"):
+            key, idx_part = part.split("[", 1)
+            key = key.strip()
+            idx_str = idx_part[:-1].strip()  # 去掉 ']'
+            indices: List[int] = []
+            if idx_str:
+                for tok in idx_str.split(","):
+                    tok = tok.strip()
+                    if not tok:
+                        continue
+                    try:
+                        # 这里直接 int()，支持负数
+                        indices.append(int(tok))
+                    except ValueError:
+                        # 忽略非法下标（也可以选择抛异常）
+                        pass
+            steps.append(PathStep(key=key, mode="indices", indices=indices))
+            continue
+
+        # 普通 key
+        steps.append(PathStep(key=part, mode="dict"))
+
+    return steps
+
+
+def delete_field_by_path(data: Any, path: str) -> None:
+    """
+    根据路径删除字段（in-place）。
+
+    规则（重要）：
+    - **凡是要穿过 list，必须显式写 [] 或 [idx]**。
+      例如：.a.b[].c  /  .a.b[0,-1].c
+      如果写成 .a.b.c 且 b 实际是 list，将直接报错，提示你补 []。
+    - 最后一段的特殊语义：
+      - ...keyX         ：删除当前 dict 的字段 keyX
+      - ...keyX[]       ：清空 keyX 对应 list（不删除字段）
+      - ...keyX[0,1,-1] ：从 keyX list 中删除这些下标对应元素
+    """
+    steps = _parse_path(path)
+    if not steps:
+        return
+
+    def _delete(cur: Any, idx: int) -> None:
+        if idx >= len(steps):
+            return
+
+        step = steps[idx]
+        is_last = (idx == len(steps) - 1)
+
+        if step.mode == "dict":
+            if not isinstance(cur, dict):
+                return
+            if step.key not in cur:
+                return
+
+            if is_last:
+                cur.pop(step.key, None)
+                return
+
+            nxt = cur.get(step.key)
+
+            # ✅ 严格：不允许 “dict step” 隐式穿过 list
+            if isinstance(nxt, list):
+                raise ValueError(
+                    f"路径 {path!r} 在 '.{step.key}' 处遇到 list，"
+                    f"但你没写 [] 或 [idx]。请改成 '.{step.key}[]' 或 '.{step.key}[...]'。"
+                )
+
+            if isinstance(nxt, dict):
+                _delete(nxt, idx + 1)
+            else:
+                return
+
+        elif step.mode == "all":
+            if not isinstance(cur, dict):
+                return
+            if step.key not in cur:
+                return
+            lst = cur.get(step.key)
+            if not isinstance(lst, list):
+                return
+
+            if is_last:
+                cur[step.key] = []
+                return
+
+            for item in lst:
+                _delete(item, idx + 1)
+
+        elif step.mode == "indices":
+            if not isinstance(cur, dict):
+                return
+            if step.key not in cur:
+                return
+            lst = cur.get(step.key)
+            if not isinstance(lst, list):
+                return
+
+            raw_indices = step.indices or []
+            n = len(lst)
+
+            real_indices: List[int] = []
+            for i in raw_indices:
+                j = n + i if i < 0 else i
+                if 0 <= j < n:
+                    real_indices.append(j)
+
+            if not real_indices:
+                return
+
+            if is_last:
+                for i in sorted(set(real_indices), reverse=True):
+                    del lst[i]
+                return
+
+            for i in set(real_indices):
+                _delete(lst[i], idx + 1)
+
+    _delete(data, 0)
+
+
+def delete_fields(samples, paths: Union[str, List[str]]) -> Any:
+    """
+    支持一次删多个路径：
+    - paths 可以是一个字符串路径
+    - 也可以是路径字符串列表
+    函数会直接修改 samples 上的每个元素，并yield sample 方便链式使用。
+    """
+    if isinstance(paths, str):
+        paths = [paths]
+    for sample in samples:
+        for p in paths:
+            delete_field_by_path(sample, p)
+        yield sample
+
+
+def rename_field_by_path(data: Any, path: str, new_key: str) -> None:
+    """
+    根据路径把“末级字段名”改成 new_key。
+
+    规则（重要）：
+    - **凡是要穿过 list，必须显式写 [] 或 [idx]**；
+      如果写成 .a.b.c 且 b 是 list，会直接报错提示补 []。
+    - 路径最后一段必须是普通 key（不能带 [] 或下标）。
+    """
+    steps = _parse_path(path)
+    if not steps:
+        return
+
+    last = steps[-1]
+    if last.mode != "dict":
+        raise ValueError(f"重命名路径最后一段必须是普通字段名，例如 '.a.b.c'，而不是 '{last}'")
+
+    if new_key == last.key:
+        return
+
+    def _rename(cur: Any, idx: int) -> None:
+        if idx >= len(steps):
+            return
+
+        step = steps[idx]
+        is_last = (idx == len(steps) - 1)
+
+        if step.mode == "dict":
+            if not isinstance(cur, dict):
+                return
+            if step.key not in cur:
+                return
+
+            if is_last:
+                value = cur.pop(step.key)
+                cur[new_key] = value
+                return
+
+            nxt = cur.get(step.key)
+
+            # ✅ 严格：不允许 “dict step” 隐式穿过 list
+            if isinstance(nxt, list):
+                raise ValueError(
+                    f"路径 {path!r} 在 '.{step.key}' 处遇到 list，"
+                    f"但你没写 [] 或 [idx]。请改成 '.{step.key}[]' 或 '.{step.key}[...]'。"
+                )
+
+            if isinstance(nxt, dict):
+                _rename(nxt, idx + 1)
+            else:
+                return
+
+        elif step.mode == "all":
+            if not isinstance(cur, dict):
+                return
+            if step.key not in cur:
+                return
+            lst = cur.get(step.key)
+            if not isinstance(lst, list):
+                return
+            for item in lst:
+                _rename(item, idx + 1)
+
+        elif step.mode == "indices":
+            if not isinstance(cur, dict):
+                return
+            if step.key not in cur:
+                return
+            lst = cur.get(step.key)
+            if not isinstance(lst, list):
+                return
+
+            raw_indices = step.indices or []
+            n = len(lst)
+            real_indices: List[int] = []
+            for i in raw_indices:
+                j = n + i if i < 0 else i
+                if 0 <= j < n:
+                    real_indices.append(j)
+
+            for j in set(real_indices):
+                _rename(lst[j], idx + 1)
+
+    _rename(data, 0)
+
+
+def rename_fields(samples, mapping: dict[str, str]):
+    """
+    一次性重命名多个字段。
+    mapping: { path: new_key }
+    例如：
+        {
+          ".key1.key2.key3": "key3-1",
+          ".key1.key2.lst[].old": "new"
+        }
+    """
+    for sample in samples:
+        for path, new_key in mapping.items():
+            rename_field_by_path(sample, path, new_key)
+        yield sample
+
+
+def _get_value_by_path_simple(item: Any, path: str) -> Any:
+    """
+    从 item 中根据路径取出对应值。
+    若路径不存在，返回 None。
+    """
+    parts = [p.strip() for p in path.split(".") if p.strip()]
+    cur = item
+    for p in parts:
+        if isinstance(cur, dict):
+            if p in cur:
+                cur = cur[p]
+            else:
+                return None
+        else:
+            return None
+    return cur
+
+
+# TODO 这个支持简单key_paths，也即不带[]的
+def remove_duplicates_interior(samples, key_paths: List[str]):
+    """
+    去重函数：
+    - samples: 一个列表（其中每个元素通常是 dict）
+    - key_paths: 主键路径列表（例如 [".id", ".info.id"]）
+
+    返回：去重后的新列表
+    """
+    if isinstance(key_paths, str):
+        key_paths = [key_paths]
+    seen = set()
+    # result = []
+    for sample in samples:
+        key_list = []
+        for path in key_paths:
+            v = _get_value_by_path_simple(sample, path)
+            if v is not None:
+                key_list.append(str(v))
+            else:
+                key_list.append(None)
+        key_tuple = tuple(key_list)
+        if key_tuple not in seen:
+            seen.add(key_tuple)
+            yield sample
+
+
+def remove_duplicates_exterior(samples, target_file_patterns, key_paths):
+    """
+    外部去重
+    - samples: 一个列表（其中每个元素通常是 dict）
+    - target_file_patterns: 一些file patterns，这些文件中出现过的数据，就过滤掉
+    - key_paths: 主键路径列表（例如 [".id", ".info.id"]）
+
+    返回：去重后的新列表
+    """
+    if isinstance(target_file_patterns, str):
+        target_file_patterns = [target_file_patterns]
+    if isinstance(key_paths, str):
+        key_paths = [key_paths]
+    target_file_paths = []
+    for tfp in target_file_patterns:
+        target_file_paths.extend(glob.glob(tfp, recursive=True))
+    target_file_paths = sorted(target_file_paths)
+    target_key_set = set()
+    for tfp in target_file_paths:
+        with open(tfp, "r", encoding="utf-8") as reader:
+            for l in reader:
+                # try:
+                l_json = json.loads(l)
+                key_list = []
+                for path in key_paths:
+                    v = _get_value_by_path_simple(l_json, path)
+                    if v is not None:
+                        key_list.append(str(v))
+                    else:
+                        key_list.append(None)
+                key_tuple = tuple(key_list)
+                target_key_set.add(key_tuple)
+    for sample in samples:
+        key_list = []
+        for path in key_paths:
+            v = _get_value_by_path_simple(sample, path)
+            if v is not None:
+                key_list.append(str(v))
+            else:
+                key_list.append(None)
+        key_tuple = tuple(key_list)
+        if key_tuple not in target_key_set:
+            yield sample
+
+
+def has_key_path(item: Any, key_path: str) -> bool:
+    """
+    判断一条 item 中是否“存在”这个 key_path（支持 [] / [0,-1]）。
+
+    语义约定：
+
+    - .a.b.c      ：普通字典下钻，所有 key 都存在就算存在；
+    - .a.b[]      ：a.b 是一个 list，且至少有一个元素 就算存在；
+    - .a.b[].c    ：a.b 是 list，且所有元素里都存在路径 .c；
+    - .a.b[0,-1].c：a.b 是 list，取下标 0 和倒数第一个元素，这两个元素都满足 .c 路径，就算存在；
+    - 负下标：和 Python 一样，-1 表示最后一个。
+    """
+
+    steps = _parse_path(key_path)
+    if not steps:
+        # 空路径直接认为存在
+        return True
+
+    def _exists(cur: Any, idx: int) -> bool:
+        if idx >= len(steps):
+            # 所有片段都走完，说明路径完整存在
+            return True
+
+        step = steps[idx]
+        is_last = (idx == len(steps) - 1)
+
+        # 1) 普通字典字段：.a.b.c
+        if step.mode == "dict":
+            if not isinstance(cur, dict):
+                return False
+            if step.key not in cur:
+                return False
+            nxt = cur[step.key]
+            return _exists(nxt, idx + 1)
+
+        # 2) key[]：列表所有元素
+        elif step.mode == "all":
+            if not isinstance(cur, dict):
+                return False
+            if step.key not in cur:
+                return False
+            lst = cur[step.key]
+            if not isinstance(lst, list):
+                return False
+
+            if is_last:
+                # .a.b[]：是 list 且至少有一个元素
+                return len(lst) > 0
+
+            # .a.b[].c：a.b 是 list，且所有元素里都存在路径 .c
+            if len(lst) == 0:
+                return False  # 空列表不算“所有元素都有”
+            for elem in lst:
+                if not _exists(elem, idx + 1):
+                    return False
+            return True
+
+        # 3) key[indices]：列表指定下标
+        elif step.mode == "indices":
+            if not isinstance(cur, dict):
+                return False
+            if step.key not in cur:
+                return False
+            lst = cur[step.key]
+            if not isinstance(lst, list):
+                return False
+
+            raw_indices = step.indices or []
+            if not raw_indices:
+                return False  # 没指定任何下标，直接认为不存在
+
+            n = len(lst)
+            elems: List[Any] = []
+
+            # 负下标语义：-1 表示最后一个
+            for raw_i in raw_indices:
+                j = raw_i if raw_i >= 0 else n + raw_i
+                if 0 <= j < n:
+                    elems.append(lst[j])
+                else:
+                    # 只要有一个下标越界，就认为路径不存在
+                    return False
+
+            if is_last:
+                # .a.b[0,-1] 作为最后一段：
+                # 只要这些下标都合法（已经检查过）且列表非空，就算存在
+                return len(elems) > 0
+
+            # .a.b[0,-1].c：这几个元素都要满足后续路径 .c
+            for elem in elems:
+                if not _exists(elem, idx + 1):
+                    return False
+            return True
+
+        else:
+            return False
+
+    return _exists(item, 0)
+
+
+def _resolve_indices(n: int, raw_indices: List[int]) -> List[int]:
+    """
+    把 [0, -1, 2] 这种原始下标列表，转成合法正下标，去重后保序。
+    """
+    res: List[int] = []
+    for i in raw_indices:
+        j = i if i >= 0 else n + i  # 负下标转正
+        if 0 <= j < n:
+            res.append(j)
+
+    out: List[int] = []
+    seen = set()
+    for j in res:
+        if j not in seen:
+            seen.add(j)
+            out.append(j)
+    return out
+
+
+def get_values_by_key_path_backup(item: Any, key_path: str) -> List[Any]:
+    """
+    输入一个 item 和 key_path，返回所有“走得到”的值（列表）。
+
+    取值语义：
+
+      .a.b.c       -> 取到所有 c 的值（通常是单个）
+      .a.b[]       -> 取 a.b 这个列表里的所有元素
+      .a.b[].c     -> 对 a.b 列表里的每个元素，取 c；不存在 c 的元素会被忽略
+      .a.b[0,-1].c -> 对下标 0 和 -1 的元素，取 c；不存在 c 的元素会被忽略
+    """
+    steps = _parse_path(key_path)
+    if not steps:
+        # 空路径：直接返回 item 本身
+        return [item]
+
+    current_nodes: List[Any] = [item]
+
+    for step in steps:
+        next_nodes: List[Any] = []
+
+        if step.mode == "dict":
+            # 普通下钻：只在 dict 中取 key
+            for node in current_nodes:
+                if isinstance(node, dict) and step.key in node:
+                    next_nodes.append(node[step.key])
+
+        elif step.mode == "all":
+            # key[]：把对应 list 展开
+            for node in current_nodes:
+                if isinstance(node, dict) and step.key in node:
+                    lst = node[step.key]
+                    if isinstance(lst, list):
+                        next_nodes.extend(lst)
+
+        elif step.mode == "indices":
+            # key[0,-1]：只取指定下标的元素
+            for node in current_nodes:
+                if isinstance(node, dict) and step.key in node:
+                    lst = node[step.key]
+                    if isinstance(lst, list) and step.indices:
+                        for j in _resolve_indices(len(lst), step.indices):
+                            next_nodes.append(lst[j])
+
+        current_nodes = next_nodes
+        if not current_nodes:
+            break
+
+    return current_nodes
+
+
+# mode 常量：用 int 比字符串判断快一些
+M_DICT = 0
+M_ALL = 1
+M_IND = 2
+_MISSING = object()
+
+@lru_cache(maxsize=1024)
+def _compile_key_path(path: str) -> Tuple[Tuple[int, str, Optional[Tuple[int, ...]]], ...]:
+    steps = _parse_path(path)  # 复用你现有的解析（已缓存）
+    compiled = []
+    for s in steps:
+        if s.mode == "dict":
+            compiled.append((M_DICT, s.key, None))
+        elif s.mode == "all":
+            compiled.append((M_ALL, s.key, None))
+        elif s.mode == "indices":
+            compiled.append((M_IND, s.key, tuple(s.indices or ())))
+        else:
+            raise ValueError(f"unknown mode: {s.mode}")
+    return tuple(compiled)
+
+
+def get_values_by_key_path(item: Any, key_path: str) -> List[Any]:
+    steps = _compile_key_path(key_path)
+    if not steps:
+        return [item]
+
+    # fast-path：全是 dict 下钻（没有 [] / [idx]）
+    # 语义上：返回“最后那个值”，并用 list 包一下，和你原函数一致
+    if all(m == M_DICT for (m, _, __) in steps):
+        cur = item
+        try:
+            for (_, k, __) in steps:
+                cur = cur[k]  # 手写索引的形态
+        except (TypeError, KeyError):
+            return []
+        return [cur]
+
+    # 通用：栈式 DFS，避免每层 next_nodes 列表分配
+    out: List[Any] = []
+    stack: List[Tuple[Any, int]] = [(item, 0)]
+    nsteps = len(steps)
+
+    while stack:
+        node, i = stack.pop()
+        if i == nsteps:
+            out.append(node)
+            continue
+
+        mode, key, idxs = steps[i]
+        next_i = i + 1
+        is_last = (next_i == nsteps)
+
+        if mode == M_DICT:
+            if isinstance(node, dict):
+                nxt = node.get(key, _MISSING)
+                if nxt is not _MISSING:
+                    stack.append((nxt, next_i))
+
+        elif mode == M_ALL:
+            if isinstance(node, dict):
+                lst = node.get(key, _MISSING)
+                if isinstance(lst, list):
+                    if is_last:
+                        # .a.b[] 作为最后一段：展开元素
+                        # 为了保持顺序，反向压栈 or 直接 extend（这里直接 extend）
+                        out.extend(lst)
+                    else:
+                        # 为了保持和你旧实现一致的顺序（左到右），需要反向压栈
+                        for elem in reversed(lst):
+                            stack.append((elem, next_i))
+
+        else:  # M_IND
+            if isinstance(node, dict):
+                lst = node.get(key, _MISSING)
+                if isinstance(lst, list) and idxs:
+                    n = len(lst)
+                    # 保持 idxs 原有顺序；负下标按 Python 语义
+                    picked = []
+                    for raw in idxs:
+                        j = raw if raw >= 0 else n + raw
+                        if 0 <= j < n:
+                            picked.append(lst[j])
+                    if is_last:
+                        out.extend(picked)
+                    else:
+                        for elem in reversed(picked):
+                            stack.append((elem, next_i))
+
+    return out
+
+
+def read_jsonl(path_patterns, is_root=False):
+    if isinstance(path_patterns, str):
+        path_patterns = [path_patterns]
+    for path_pattern in path_patterns:
+        path_list = sorted(glob.glob(path_pattern, recursive=True))
+        for path in path_list:
+            with open(path, encoding="utf-8", errors="ignore") as reader:
+                for line in reader:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        line_json = json.loads(line)
+                        if isinstance(line_json, dict) and is_root:
+                            line_json["##FILEPATH##"] = path
+                        yield line_json
+                    except Exception:
+                        continue
+
+
+def read_json(path_patterns):
+    if isinstance(path_patterns, str):
+        path_patterns = [path_patterns]
+    for path_pattern in path_patterns:
+        path_list = sorted(glob.glob(path_pattern, recursive=True))
+        for path in path_list:
+            with open(path, encoding="utf-8", errors="ignore") as reader:
+                try:
+                    line_json = json.load(reader)
+                    yield line_json
+                except Exception:
+                    continue
+
+
+def save_jsonl(samples, result_save_path, overwrite=False):
+    Path(result_save_path).parent.mkdir(parents=True, exist_ok=True)
+    if Path(result_save_path).exists() and (not overwrite):
+        print(f"文件[{result_save_path}]已存在，将不会覆盖!!!")
+        return
+    with open(result_save_path, "w", encoding="utf-8") as writer:
+        for sample in samples:
+            # if isinstance(sample, dict):
+            #     sample.pop("##FILEPATH##", None)
+            writer.write(json.dumps(sample, ensure_ascii=False)+"\n")
+
+
+def save_data_to_excel_merge(samples, file_path, key, merge=True):
+    """
+    生成表格，某些单元格要合并
+    """
+    samples = [x for x in samples]
+    for s in samples:
+        assert isinstance(s[key], list)
+        assert len(s[key]) > 0
+        assert isinstance(s[key][0], dict), s[key][0]
+    column_names = []
+    for k in samples[0]:
+        if k != key:
+            column_names.append(k)
+        else:
+            for k1 in samples[0][key][0]:
+                column_names.append(f"{key}::{k1}")
+    assert len(column_names) <= 26
+    column_map = {y:x for x, y in zip(string.ascii_uppercase, column_names)}
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    # 标题行
+    font_bold = Font(bold=True)
+    for cn in column_names:
+        ws[f"{column_map[cn]}1"] = cn
+        ws[f"{column_map[cn]}1"].font = font_bold
+    row_start = 2  # 第一行是标题
+    for s in tqdm.tqdm(samples, "写入表格"):
+        nrow = len(s[key])
+        row_end = row_start + nrow - 1
+        # merge单元格并填入内容
+        for k in s:
+            if k != key:
+                if merge:
+                    ws.merge_cells(f"{column_map[k]}{row_start}:{column_map[k]}{row_end}")
+                try:
+                    ws[f"{column_map[k]}{row_start}"] = s[k]
+                except:
+                    try:
+                        ws[f"{column_map[k]}{row_start}"] = json.dumps(s[k], ensure_ascii=False)
+                    except:
+                        raise ValueError(s[k])
+            else:
+                for ii in range(len(s[key])):
+                    for kk in s[key][ii]:
+                        write_k = column_map[f"{k}::{kk}"]
+                        try:
+                            ws[f"{write_k}{row_start + ii}"] = s[key][ii][kk]
+                        except:
+                            try:
+                                ws[f"{write_k}{row_start + ii}"] = json.dumps(s[key][ii][kk], ensure_ascii=False)
+                            except:
+                                raise ValueError(s[key][ii][kk])
+        yield s
+        row_start = row_start + nrow
+    wb.save(file_path)
+    print(f"✅ File saved: {file_path} - Records: {len(samples)}")
+
+
+def checkpoint_to_file(func: Callable[..., Iterable[Any]]):
+    """
+    新增参数 overwrite（透传给 save_jsonl）：
+      - mode="read"  : 直接读文件
+      - mode="write" : 若文件已存在且 overwrite=False，则直接读文件（不执行 func）
+                      否则执行 func，并调用 save_jsonl 写入；同时把结果再 yield 给调用方
+      - mode=None    : 执行并消费完，不返回
+    """
+
+    @wraps(func)
+    def decorator_args(save_path: str, mode: Optional[str] = None, overwrite: bool = False):
+        mode_norm = None if mode is None else str(mode).strip().lower()
+        if mode_norm not in (None, "write", "read"):
+            raise ValueError(f'mode 必须是 "write" / "read" / None，当前是: {mode!r}')
+
+        path = Path(save_path)
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # ===== READ =====
+            if mode_norm == "read":
+                def gen_read() -> Generator[Any, None, None]:
+                    if not path.exists():
+                        raise FileNotFoundError(f"读取失败，文件不存在: {path}")
+                    yield from read_jsonl(path.as_posix())
+                return gen_read()
+
+            # ===== WRITE =====
+            if mode_norm == "write":
+                path.parent.mkdir(parents=True, exist_ok=True)
+
+                # 文件存在且不覆盖：直接读，不执行 func
+                if path.exists() and (not overwrite):
+                    def gen_read_existing() -> Generator[Any, None, None]:
+                        yield from read_jsonl(path.as_posix())
+                    return gen_read_existing()
+
+                buf = deque()
+                err: Optional[BaseException] = None
+
+                def tapping_gen(src: Iterable[Any]) -> Generator[Any, None, None]:
+                    nonlocal err
+                    try:
+                        for x in src:
+                            buf.append(x)
+                            yield x
+                    except BaseException as e:
+                        err = e
+                        raise
+
+                def gen_write() -> Generator[Any, None, None]:
+                    src = func(*args, **kwargs)
+                    # save_jsonl 会消费 tapping_gen(src)，从而写文件并把数据塞进 buf
+                    save_jsonl(tapping_gen(src), path.as_posix(), overwrite=overwrite)
+
+                    if err is not None:
+                        raise err
+
+                    while buf:
+                        yield buf.popleft()
+
+                return gen_write()
+
+            # ===== NONE =====
+            for _ in func(*args, **kwargs):
+                pass
+            return None
+
+        return wrapper
+
+    return decorator_args
+
+
+
+if __name__ == "__main__":
+    import json
+
+    obj = {
+        "key1": {
+            "key2": {
+                "key3": [
+                    {"key4": 123, "keep": "a"},
+                    {"key4": 456, "keep": "b"},
+                    {"key4": 789, "keep": "c"}
+                ]
+            }
+        }
+    }
+
+    # # 1. 对所有元素删 key4
+    # delete_field_by_path(obj, ".key1.key2.key3[].key4")
+
+    # # 2. 删除key3
+    # delete_field_by_path(obj, ".key1.key2.key3")
+   
+    # # 3. 删除key3所有元素
+    # delete_field_by_path(obj, ".key1.key2.key3[]")
+
+    # # 2. 只对第 0、1 个元素删 key4
+    # delete_field_by_path(obj, ".key1.key2.key3[0,1].key4")
+
+    # # 3. 直接删掉 key3 列表中第 0、2 个元素
+    # delete_field_by_path(obj, ".key1.key2.key3[0,2]")
+
+    # # 3. 直接删掉 key3 列表中第-1 个元素
+    # delete_field_by_path(obj, ".key1.key2.key3[-3, -1]")
+
+    # delete_field_by_path(obj, ".key1.key2.key3[-2,1].key4")
+
+    # rename_field_by_path(obj, ".key1.key2.key3", "key333")
+
+    # print(json.dumps(obj, ensure_ascii=False, indent=2))
+
+    # data = {
+    #     "a": {
+    #         "b": [
+    #             {"c": 1, "x": 0},
+    #             {"c": 2, "y": 0},
+    #         ]
+    #     }
+    # }
+
+    # print(has_key_path(data, ".a.b.c"))         # False（b 不是 dict）
+    # print(has_key_path(data, ".a.b[]"))         # True（b 是 list 且非空）
+    # print(has_key_path(data, ".a.b[].c"))       # True（所有元素都有 c）
+    # print(has_key_path(data, ".a.b[].x"))       # False（有元素没有 x）
+    # print(has_key_path(data, ".a.b[].y"))       # False（有元素没有 y）
+    # print(has_key_path(data, ".a.b[].z"))       # False（有元素没有 z）
+
+    # print(has_key_path(data, ".a.b[0,-1].c"))   # True（0 和 -1 都有 c）
+    # print(has_key_path(data, ".a.b[0,-1].y"))   # False（这两个元素并非都存在 y）
+    # print(has_key_path(data, ".a.b[-1].y"))     # True（-1有y）
+    # print(has_key_path(data, ".a.b[100].c"))    # False（下标越界）
+
+
+    # item = {
+    #     "a": {
+    #         "b": [
+    #             {"c": 1, "x": 0},
+    #             {"c": 2, "x": 0},
+    #             {"d": 3, "x": 0}
+    #         ]
+    #     }
+    # }
+
+    # print(get_values_by_key_path(item, ".a.b.c"))
+    # # []   因为 b 是 list，不是 dict，.b.c 走不下去
+
+    # print(get_values_by_key_path(item, ".a.b[]"))
+    # # [{'c': 1, 'x': 0}, {'c': 2, 'x': 0}, {'d': 3, 'x': 0}]
+
+    # print(get_values_by_key_path(item, ".a.b"))  # NOTE 注意这个和上面的结果不一样
+    # # [[{'c': 1, 'x': 0}, {'c': 2, 'x': 0}, {'d': 3, 'x': 0}]]
+
+    # print(get_values_by_key_path(item, ".a.b[].c"))
+    # # [1, 2]   第三个元素没有 c，被自动忽略
+
+    # print(get_values_by_key_path(item, ".a.b[0,-1].c"))
+    # # [1]      下标 0 有 c，下标 -1 没 c，所以只收集到 1

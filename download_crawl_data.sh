@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# tasks="资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00000_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00001_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00002_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00003_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00004_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00005_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00006_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00007_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00008_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00009_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00010_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00011_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00012_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00013_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00014_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00015_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00016_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00017_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00018_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00019_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00020_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00021_video_check_crawl_in_new
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00022_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00023_video_check_crawl_in_new
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00024_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00025_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00026_video_check_crawl_in_new
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00027_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00028_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00029_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00030_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00031_video_check_crawl_in_new
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00032_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00033_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00034_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00035_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00036_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00037_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00038_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00039_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00040_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00041_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00042_video_check_crawl_in_new
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00043_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00044_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00045_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00046_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00047_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00048_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00049_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00050_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00051_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00052_video_check_crawl_in
+# 资源教育部-辅学offline_251231_doubao-seed-1.6-0615_1114攻关_cz_sm_part00053_video_check_crawl_in"
+
+tasks="资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_1
+资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_2
+资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_3
+资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_4
+资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_5
+资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_6
+资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_7"
+
+save_dir=/mnt/pan8T/temp_djguo/存量库清洗-初中单模/正式批次/初中单模视频预置问题爬取输出
+
+while IFS= read -r line; do
+    nohup python download_crawl_data.py --save_dir=${save_dir} --task_name=${line} > nohup.log 2>&1 &
+done <<< "$tasks"
