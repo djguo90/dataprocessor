@@ -8,6 +8,7 @@ __pycache__/
 nohup.out
 delivery/
 logs/
+data/
 
 # C extensions
 *.so
