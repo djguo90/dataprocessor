@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 if not logger.handlers:
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-def read_jsonl(path_patterns: Union[str, List[str]], is_root: bool = False, ignore_errors: bool = False) -> Generator[Any, None, None]:
+def read_jsonl(path_patterns: Union[str, List[str]], ignore_errors: bool = False) -> Generator[Any, None, None]:
     """
     读取 JSONL 文件。
     :param ignore_errors: 是否忽略解析错误的行（默认为 False，会打印 Warning）
@@ -42,8 +42,6 @@ def read_jsonl(path_patterns: Union[str, List[str]], is_root: bool = False, igno
                         continue
                     try:
                         line_json = json.loads(line)
-                        if isinstance(line_json, dict) and is_root:
-                            line_json["##FILEPATH##"] = path
                         line_count += 1
                         yield line_json
                     except json.JSONDecodeError as e:
