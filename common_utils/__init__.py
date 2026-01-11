@@ -19,7 +19,7 @@ from .filters import (
     remove_duplicates_interior, 
     remove_duplicates_exterior
 )
-from .decorators import checkpoint_to_file
+from .decorators import checkpoint_to_file, run_pipeline
 
 __all__ = [
     # IO
@@ -39,5 +39,6 @@ __all__ = [
     "remove_duplicates_exterior",
     
     # Decorators
-    "checkpoint_to_file"
+    "checkpoint_to_file",
+    "run_pipeline"
 ]

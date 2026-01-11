@@ -3,6 +3,7 @@ from typing import Callable, Iterable, Any, Optional, Generator
 from pathlib import Path
 from .io import read_jsonl, save_jsonl
 import logging
+from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -93,3 +94,10 @@ def checkpoint_to_file(func: Callable[..., Iterable[Any]]):
         return wrapper
 
     return decorator_args
+
+def run_pipeline(pipeline_generator):
+    """
+    消费生成器，驱动管道执行。
+    使用 maxlen=0 的 deque 是消费迭代器最快且不占内存的方法。
+    """
+    deque(pipeline_generator, maxlen=0)

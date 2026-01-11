@@ -9,9 +9,21 @@ import time
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import os
+import sys
+
+common_utils_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..")
+# 示例3：如果搜索到的路径是 /mnt/pan8T/temp_djguo/dataprocessor/utils/，直接写绝对路径
+# common_utils_path = "/mnt/pan8T/temp_djguo/dataprocessor/utils/"
+
+# 将路径添加到Python搜索路径
+sys.path.append(common_utils_path)
 
 # 引入你的工具库
-from common_utils import read_jsonl, get_values_by_key_path, checkpoint_to_file
+from common_utils import read_jsonl, get_values_by_key_path, checkpoint_to_file, run_pipeline
+
+import logging
+logger = logging.getLogger(__name__)
 
 # ==================== 基础处理逻辑 (保持不变) ====================
 
@@ -301,19 +313,31 @@ def pipeline_combine_all(orig_data_path, video_res_path, analysis_res_path, late
 # ==================== Main ====================
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler(sys.stdout)]
+    )
     parser = argparse.ArgumentParser()
     parser.add_argument("--phase", type=str, choices=["小学", "初中"], default="初中")
     parser.add_argument("--part", type=str, default="1")
     parser.add_argument("--tran_script_key", "--tkey", type=str, default=".tran_script[].tranScript")
     parser.add_argument("--prompt_path", "--ppath", type=str, default="/mnt/pan8T/temp_djguo/存量库清洗-初中单模/效果验证/小初单模视频逐字稿+读题筛选prompt_P1127.md")
-    parser.add_argument("--save_dir", "--sdir", type=str, default="/mnt/pan8T/temp_djguo/存量库清洗-初中单模/正式批次")
+    parser.add_argument("--save_dir", "--sdir", type=str)
     parser.add_argument("--stage", type=str, required=True, 
                         choices=["保存爬取输入", "爬取输出结果", "latex过滤结果", "解析过滤结果", "综合过滤结果"])
-    parser.add_argument("--orig_data_path", type=str, default="/mnt/pan8T/topic_repair/jianwang25_topic_source_data/xiaoshu_sm/all_json/part-00001-3e3ce051-8a5e-40ad-997f-eac4fbd5e7af-c000")
+    parser.add_argument("--orig_data_path", type=str)
     # 支持 list 参数
-    parser.add_argument("--analysis_result_path", type=str, nargs="+", default=["/mnt/pan8T/temp_jiahe3/results/junior/3kw/final_result_check_latex_html/*json"])
+    parser.add_argument("--analysis_result_path", type=str, nargs="+")
     
     args = parser.parse_args()
+    # 打印参数
+    logger.info("=" * 50)
+    logger.info(f"🚀 任务启动: [Part {args.part}] - {args.phase}")
+    logger.info(f"📌 当前阶段: {args.stage}")
+    logger.info(f"📂 原始数据: {args.orig_data_path}")
+    logger.info(f"📂 保存目录: {args.save_dir}")
+    logger.info("=" * 50)
 
     # 预定义文件路径规则 (集中管理路径，避免散落在各处)
     path_crawl_in = Path(f"{args.save_dir}", f"{args.phase}单模视频质量过滤爬取输入", f"{args.phase}_单模_part{args.part}_video_check_crawl_in.json").as_posix()
@@ -322,62 +346,75 @@ if __name__ == "__main__":
     # 这里假设输入文件跑完模型后，放在 "爬取输出" 目录
     path_crawl_out = Path(f"{args.save_dir}", f"{args.phase}单模视频质量过滤爬取输出", f"{args.phase}_单模_part{args.part}_video_check_crawl_out.json").as_posix()
     
-    path_video_res = Path(f"{args.save_dir}", f"{args.phase}单模视频过滤结果", f"{args.phase}_单模_part{args.part}_video_check_result.json").as_posix()
+    path_video_res = Path(f"{args.save_dir}", f"{args.phase}单模视频质量过滤结果", f"{args.phase}_单模_part{args.part}_video_check_result.json").as_posix()
     path_latex_res = Path(f"{args.save_dir}", f"{args.phase}单模视频latex过滤结果", f"{args.phase}_单模_part{args.part}_latex_check_result.json").as_posix()
     path_analysis_res = Path(f"{args.save_dir}", f"{args.phase}单模视频解析过滤继承结果", f"{args.phase}_单模_analysis_check_result.json").as_posix()
     path_final_res = Path(f"{args.save_dir}", f"{args.phase}单模视频综合过滤结果", f"part{args.part}_video_check_result.json").as_posix()
-
-    print(f"当前阶段: {args.stage}")
     
     # ==================== 执行逻辑 ====================
     # 使用方式： func(save_path=..., mode="write")(业务参数...)
 
     if args.stage == "保存爬取输入":
-        pipeline_crawl_input(
-            save_path=path_crawl_in, 
-            mode="write", 
-            overwrite=True  # 通常生成输入是第一步，可以覆盖
-        )(
-            orig_data_path=args.orig_data_path,
-            tran_script_key=args.tran_script_key,
-            phase=args.phase,
-            prompt_path=args.prompt_path
+        logger.info(f"🔜 目标输出路径: {path_crawl_in}")
+        run_pipeline(
+            pipeline_crawl_input(
+                save_path=path_crawl_in, 
+                mode="write", 
+                overwrite=True  # 通常生成输入是第一步，可以覆盖
+            )(
+                orig_data_path=args.orig_data_path,
+                tran_script_key=args.tran_script_key,
+                phase=args.phase,
+                prompt_path=args.prompt_path
+            )
         )
 
     elif args.stage == "爬取输出结果":
-        pipeline_crawl_output_filter(
-            save_path=path_video_res,
-            mode="write"
-        )(
-            crawl_out_path=path_crawl_out
+        logger.info(f"🔙 输入爬虫结果: {path_crawl_out}")
+        logger.info(f"🔜 目标输出路径: {path_video_res}")
+        run_pipeline(
+            pipeline_crawl_output_filter(
+                save_path=path_video_res,
+                mode="write"
+            )(
+                crawl_out_path=path_crawl_out
+            )
         )
 
     elif args.stage == "latex过滤结果":
-        pipeline_latex_filter(
-            save_path=path_latex_res,
-            mode="write"
-        )(
-            orig_data_path=args.orig_data_path,
-            tran_script_key=args.tran_script_key,
-            phase=args.phase
-        )
-
+        logger.info(f"🔜 目标输出路径: {path_latex_res}")
+        run_pipeline(
+            pipeline_latex_filter(
+                save_path=path_latex_res,
+                mode="write"
+            )(
+                orig_data_path=args.orig_data_path,
+                tran_script_key=args.tran_script_key,
+                phase=args.phase
+            )
+       )
     elif args.stage == "解析过滤结果":
-        pipeline_analysis_filter(
-            save_path=path_analysis_res,
-            mode="write"
-        )(
-            analysis_result_paths=args.analysis_result_path
+        logger.info(f"🔜 目标输出路径: {path_analysis_res}")
+        run_pipeline(
+            pipeline_analysis_filter(
+                save_path=path_analysis_res,
+                mode="write"
+            )(
+                analysis_result_paths=args.analysis_result_path
+            )
         )
 
     elif args.stage == "综合过滤结果":
+        logger.info(f"🔜 目标输出路径: {path_final_res}")
         # 这一步依赖前面的结果文件存在
-        pipeline_combine_all(
-            save_path=path_final_res,
-            mode="write"
-        )(
-            orig_data_path=args.orig_data_path,
-            video_res_path=path_video_res,
-            analysis_res_path=path_analysis_res,
-            latex_res_path=path_latex_res
+        run_pipeline(
+            pipeline_combine_all(
+                save_path=path_final_res,
+                mode="write"
+            )(
+                orig_data_path=args.orig_data_path,
+                video_res_path=path_video_res,
+                analysis_res_path=path_analysis_res,
+                latex_res_path=path_latex_res
+            )
         )
