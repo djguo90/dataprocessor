@@ -13,10 +13,6 @@ import os
 import sys
 
 common_utils_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..")
-# 示例3：如果搜索到的路径是 /mnt/pan8T/temp_djguo/dataprocessor/utils/，直接写绝对路径
-# common_utils_path = "/mnt/pan8T/temp_djguo/dataprocessor/utils/"
-
-# 将路径添加到Python搜索路径
 sys.path.append(common_utils_path)
 
 # 引入你的工具库
