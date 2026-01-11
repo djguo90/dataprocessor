@@ -9,6 +9,13 @@ nohup.out
 delivery/
 logs/
 data/
+*.zip
+*.eot
+*.otf
+*.ttf
+*.woff
+*.woff2
+gpt导出工具-导出单文件_主节点_linux
 
 # C extensions
 *.so
