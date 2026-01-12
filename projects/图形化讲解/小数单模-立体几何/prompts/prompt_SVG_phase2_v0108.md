@@ -90,7 +90,6 @@ xxxxx
 4. **布局计算（Layout Calculation）**：
    - **禁止硬编码**：不要在代码中大量使用如 `x: 350` 这样的魔术数字。
    - **响应式计算**：必须在代码开头定义 `cx` (中心X), `cy` (中心Y), `baseSize` 等常量。后续坐标应基于这些常量计算（如 `x: cx - baseSize/2`）。
-   - **防重叠逻辑**：涉及多个物体时，必须根据投影宽度/高度计算 `gap`，防止视觉重叠。
    - **尺寸线布局**：绘制尺寸线时，需要尽可能分布在不同的边上。
 5. **增量绘制**：
    - 后续步骤（Step N）是在 Step N-1 的基础上运行的。
@@ -102,256 +101,435 @@ xxxxx
 1. 尽量不要使用drawArrow函数，如果使用，只能使用水平方向的箭头。
 2. 对于长方体或正方体，必须使用斜二测画法，对于圆柱体，圆锥体，必须使用正视图画法。
 
-### 默认样式配置及核心工具函数 (API 文档)
+# 功能函数与默认配置 完整API文档（基于代码实现）
+## 前置说明
+1. **全局常量依赖**：所有绘制函数均依赖 SVG 命名空间常量，需提前定义：`const SVG_NS = "http://www.w3.org/2000/svg"`；
+2. **SVG 容器依赖**：函数默认读取全局 `svg` 变量，若不存在则读取 `window.mainSvg`，需确保该 SVG 容器已初始化；
+3. **样式继承规则**：所有函数的 `styles` 参数均通过 `{ ...默认配置, ...styles }` 覆盖默认值，自定义样式优先级更高；
+4. **错误处理**：核心参数缺失（如 `id`）或 SVG 容器不存在时，函数会抛出明确错误；线段长度 < 0.001 时返回 `null`。
 
-**环境假设**：以下常量和函数已在全局作用域定义，**严禁在输出代码中重新定义或实现**。您的任务是根据以下文档编写**调用逻辑**。
+## 1. 全局样式配置对象
+### 1.1 几何体统一默认样式 `DEFAULT_STYLES`
+控制 `drawCuboid`/`drawCylinder`/`drawCone` 的外观，所有属性均可通过函数 `styles` 参数覆盖。
 
-#### 1. 全局样式配置对象
+| 分类         | 属性名             | 默认值                | 说明                                                                 |
+|--------------|--------------------|-----------------------|----------------------------------------------------------------------|
+| 边线（可见） | edgeStroke         | "#333"                | 可见边线颜色                                                         |
+|              | edgeWidth          | 2                     | 可见边线宽度（像素）                                                 |
+|              | edgeOpacity        | 1                     | 可见边线透明度（0~1）                                                |
+|              | edgeLinecap        | "round"               | 边线端点样式（butt/round/square）                                    |
+|              | edgeLinejoin       | "round"               | 边线拐角样式（miter/round/bevel）                                    |
+|              | edgeMiterlimit     | 4                     | 仅 edgeLinejoin="miter" 时生效，尖角限制值                           |
+| 边线（隐藏） | dashArray          | "5,5"                 | 兼容旧字段：不可见线虚线样式                                         |
+|              | hiddenDashArray    | "5,5"                 | 推荐新字段：专门给隐藏线用的虚线样式                                 |
+|              | hiddenStroke       | "#333"                | 隐藏线颜色（可设为 "#666" 更淡）                                     |
+|              | hiddenWidth        | null                  | 隐藏线宽度（null 表示沿用 edgeWidth）                                |
+|              | hiddenOpacity      | 1                     | 隐藏线透明度                                                         |
+| 面           | faceFill           | "rgba(0,0,0,0)"       | 面填充色（默认透明）                                                 |
+|              | faceOpacity        | 1                     | 面整体透明度（配合 faceFill 使用）                                   |
+|              | faceStroke         | "none"                | 面描边颜色（默认不描边）                                             |
+|              | faceStrokeWidth    | 0                     | 面描边宽度                                                           |
+|              | faceStrokeOpacity  | 1                     | 面描边透明度                                                         |
+| 顶点         | showVertices       | false                 | 是否显示顶点                                                         |
+|              | vertexRadius       | 4                     | 顶点圆形半径                                                         |
+|              | vertexFill         | "#333"                | 顶点填充色                                                           |
+|              | vertexStroke       | "none"                | 顶点描边颜色                                                         |
+|              | vertexStrokeWidth  | 0                     | 顶点描边宽度                                                         |
+|              | vertexOpacity      | 1                     | 顶点透明度                                                           |
+| 圆类细分     | segments           | 72                    | 圆周分段数（圆柱/圆锥默认读取此值，≥12 生效）                        |
+| 调试辅助     | showCenters        | false                 | 是否显示几何中心点（圆柱/圆锥等）                                   |
+|              | centerRadius       | 3                     | 中心点半径                                                           |
+|              | centerFill         | "#e11d48"             | 中心点填充色（调试用醒目色）                                         |
+|              | debug              | false                 | true 时绘制函数可添加额外辅助元素/更醒目样式                         |
 
-**`DEFAULT_STYLES` (几何体通用样式)**
-用于控制 `drawCuboid`, `drawCylinder`, `drawCone` 的外观。
+### 1.2 标注/箭头统一默认样式 `DEFAULT_ANNOTATION_STYLES`
+控制 `drawArrow`/`drawDimensionLine`/`drawDirectLabel`/`drawTextLabel` 的外观。
 
-*   **可见边 (Visible Edges)**
-    *   `edgeStroke`: 线条颜色 (默认 `"#333"`)。
-    *   `edgeWidth`: 线条宽度 (默认 `2`)。
-    *   `edgeOpacity`: 线条透明度 (默认 `1`)。
-    *   `edgeLinecap`: 线端点样式 (`"round"`, `"butt"`, `"square"`)。
-    *   `edgeLinejoin`: 线连接点样式 (`"round"`, `"miter"`, `"bevel"`)。
-*   **不可见/隐藏边 (Hidden Edges)**
-    *   `hiddenDashArray`: 虚线模式 (默认 `"5,5"`, 即实线5px空5px)。
-    *   `hiddenStroke`: 颜色 (若为 `null`，自动跟随 `edgeStroke`)。
-    *   `hiddenWidth`: 宽度 (若为 `null`，自动跟随 `edgeWidth`)。
-    *   `hiddenOpacity`: 透明度 (建议设为 `0.6` 或 `0.5` 以增强空间透视感)。
-*   **面 (Faces)**
-    *   `faceFill`: 填充颜色 (默认 `"rgba(0,0,0,0)"` 即完全透明)。
-    *   `faceOpacity`: 面的整体透明度 (默认 `1`)。
-    *   `faceStroke`: 面的描边颜色 (默认 `"none"`，一般不描边，由 edge 负责)。
-*   **顶点 (Vertices)**
-    *   `showVertices`: 是否自动绘制顶点圆点 (默认 `false`)。
-    *   `vertexRadius`: 顶点半径 (默认 `4`)。
-    *   `vertexFill`: 顶点填充色 (默认 `"#333"`)。
-*   **几何精度与调试**
-    *   `segments`: 圆柱/圆锥底面的圆周分段数 (默认 `72`，值越大越平滑)。
-    *   `showCenters`: 是否显示几何体的几何中心点 (默认 `false`)。
+| 分类         | 属性名             | 默认值                | 说明                                                                 |
+|--------------|--------------------|-----------------------|----------------------------------------------------------------------|
+| 线条/箭头通用 | stroke             | "#333"                | 标注线/箭头线条颜色                                                  |
+|              | strokeWidth        | 1.5                   | 线条宽度                                                             |
+|              | opacity            | 1                     | 线条/箭头透明度                                                     |
+|              | linecap            | "round"               | 线条端点样式                                                         |
+|              | linejoin           | "round"               | 线条拐角样式                                                         |
+|              | dashArray          | null                  | 通用虚线样式（null 为实线）                                          |
+|              | fill               | "#333"                | 箭头填充色                                                   |
+| 文字通用     | fontSize           | 14                    | 字号（像素）                                                         |
+|              | fontFamily         | "Arial, sans-serif"   | 字体                                                                 |
+|              | textFill           | "#333"                | 文字填充色                                                           |
+| 文字光晕     | haloStroke         | "white"               | 文字外发光描边颜色（增强对比度）                                     |
+|              | haloWidth          | 3                     | 外发光宽度                                                           |
+|              | haloLinejoin       | "round"               | 外发光拐角样式                                                       |
+| 箭头参数     | arrowSize          | 8                     | 箭头斜边长度                                                         |
+|              | arrowWidth         | 3                     | 箭头底边宽度的一半                                                   |
+| 尺寸标注特有 | textOffset         | 8                     | 文字距离线条的偏移量                                                 |
+|              | ext_length         | 8                     | 延伸线总长度                                                         |
+| 原地标注特有 | directDashArray    | "4,4"                 | 原地标注连接线的虚线样式                                             |
+|              | directArrowStart   | true                  | 原地标注连接线是否显示起点箭头（代码暂未使用，预留）                 |
+|              | directArrowEnd     | true                  | 原地标注连接线是否显示终点箭头（代码暂未使用，预留）                 |
 
-**`DEFAULT_ANNOTATION_STYLES` (标注通用样式)**
-用于控制 `drawArrow`, `drawDimensionLine`, `drawDirectLabel` 的外观。
+## 2. 投影函数 `Projections`
+将三维空间坐标 `(x, y, z)` 转换为二维 SVG 屏幕坐标 `(px, py)`，所有绘制函数的 `projectFn` 参数均接收此类型函数。
 
-*   **线条与箭头**
-    *   `stroke`: 标注线颜色 (默认 `"#333"`)。
-    *   `strokeWidth`: 线宽 (默认 `1.5`)。
-    *   `arrowSize`: 箭头斜边长度 (默认 `8`)。
-    *   `arrowWidth`: 箭头底边宽度的一半 (默认 `3`)。
-*   **文本**
-    *   `fontSize`: 字号 (默认 `14`)。
-    *   `fontFamily`: 字体 (默认 `"Arial, sans-serif"`)。
-    *   `textFill`: 文字颜色 (默认 `"#333"`)。
-    *   `haloStroke`: 文字外发光描边颜色 (默认 `"white"`，用于防止文字压线时看不清)。
-    *   `haloWidth`: 外发光宽度 (默认 `3`)。
-*   **文本背景框 (Text Background)**
-    *   `textBackground`: 是否启用矩形背景 (默认 `false`)。
-    *   `textBgFill`: 背景色 (默认 `"white"`)。
-    *   `textBgOpacity`: 背景透明度 (默认 `1`)。
-    *   `textBgPadding`: 背景内边距 (默认 `3`)。
-*   **专用参数**
-    *   `ext_length`: 尺寸线延伸线的总长度 (默认 `25`)。
-    *   `gap`: 延伸线起点与测量点的留白间距 (默认 `5`)。
-    *   `textOffset`: 文字距离线条的偏移量 (默认 `10`)。
+### 2.1 `Projections.OBLIQUE(x, y, z, config)`（斜二测）
+- **适用场景**：正方体、长方体、棱柱及组合体；
+- **特点**：X轴随Z轴偏移，圆呈倾斜状；
+- **实现逻辑**：
+  ```
+  px = centerX + x + z * k * Math.cos(angle)
+  py = centerY - (y + z * k * Math.sin(angle))
+  ```
+- **Config 参数**：
+  | 参数名   | 默认值       | 说明               |
+  |----------|--------------|--------------------|
+  | centerX  | 无（必填）   | 画布中心点X坐标    |
+  | centerY  | 无（必填）   | 画布中心点Y坐标    |
+  | k        | 0.5          | 深度缩放系数       |
+  | angle    | Math.PI / 4  | 斜二测角度（45度） |
 
-#### 2. 投影函数 `Projections`
+### 2.2 `Projections.FRONT(x, y, z, config)`（正视图+深度叠加）
+- **适用场景**：圆柱体、圆锥体、球体；
+- **特点**：X轴无透视偏移，底面圆视觉上为水平扁平椭圆（符合小学数学制图习惯）；
+- **实现逻辑**：
+  ```
+  px = centerX + x
+  py = centerY - (y + z * k)
+  ```
+- **Config 参数**：
+  | 参数名   | 默认值   | 说明               |
+  |----------|----------|--------------------|
+  | centerX  | 无（必填）| 画布中心点X坐标    |
+  | centerY  | 无（必填）| 画布中心点Y坐标    |
+  | k        | 0.3      | 深度缩放系数       |
 
-**功能说明**：将三维空间坐标 $(x, y, z)$ 转换为二维 SVG 屏幕坐标 $(px, py)$。
+## 3. 核心绘制函数
+### 3.1 绘制长方体 `drawCuboid(config)`
+#### 功能说明
+绘制长方体/正方体，自动计算面的法向量与可视性，正确处理虚实线遮挡关系，支持自定义投影和样式覆盖。
+#### 使用场景
+正方体、长方体、容器、长方体切割等几何图形绘制。
+#### 详细参数
+| 参数名    | 类型       | 是否必填 | 默认值              | 说明                                                                 |
+|-----------|------------|----------|---------------------|----------------------------------------------------------------------|
+| id        | String     | 是       | -                   | SVG 组元素的唯一 ID 前缀                                             |
+| x         | Number     | 否       | 0                   | 左下前顶点的 3D X 坐标（Vertex 0 位置）                              |
+| y         | Number     | 否       | 0                   | 左下前顶点的 3D Y 坐标                                               |
+| z         | Number     | 否       | 0                   | 左下前顶点的 3D Z 坐标                                               |
+| w         | Number     | 是       | -                   | 宽度（X轴方向长度）                                                  |
+| h         | Number     | 是       | -                   | 高度（Y轴方向长度）                                                  |
+| d         | Number     | 是       | -                   | 深度（Z轴方向长度）                                                  |
+| centerX   | Number     | 是       | -                   | 画布中心点X坐标（供投影函数使用）                                    |
+| centerY   | Number     | 是       | -                   | 画布中心点Y坐标（供投影函数使用）                                    |
+| projectFn | Function   | 否       | Projections.OBLIQUE | 投影函数                                                             |
+| styles    | Object     | 否       | {}                  | 覆盖 DEFAULT_STYLES 的配置                                          |
 
-*   **`Projections.OBLIQUE(x, y, z, config)` (斜二测)**
-    *   **适用场景**：正方体、长方体、棱柱以及由它们组成的组合体。
-    *   **实现逻辑**：
-        *   $px = centerX + x + z \cdot k \cdot \cos(angle)$
-        *   $py = centerY - (y + z \cdot k \cdot \sin(angle))$
-    *   **Config 参数**：
-        *   `centerX`, `centerY`: 画布中心。
-        *   `k`: 深度缩放系数 (默认 `0.5`)。
-        *   `angle`: 斜二测角度 (默认 `Math.PI/4` 即 45度)。
+#### 返回元素 ID 及含义
+| 类型       | ID 格式                  | 说明                                                                 |
+|------------|--------------------------|----------------------------------------------------------------------|
+| 组         | `${id}`                  | 长方体根组                                                           |
+| 面         | `${id}-face-front`       | 前表面（z=0）                                                       |
+|            | `${id}-face-back`        | 后表面（z=d）                                                       |
+|            | `${id}-face-right`       | 右表面（x=w）                                                       |
+|            | `${id}-face-left`        | 左表面（x=0）                                                       |
+|            | `${id}-face-top`         | 上表面（y=h）                                                       |
+|            | `${id}-face-bottom`      | 下表面（y=0）                                                       |
+| 顶点       | `${id}-vertex-0`         | 左下前（x,y,z）                                                     |
+|            | `${id}-vertex-1`         | 右下前（x+w,y,z）                                                   |
+|            | `${id}-vertex-2`         | 右上前（x+w,y+h,z）                                                 |
+|            | `${id}-vertex-3`         | 左上前（x,y+h,z）                                                   |
+|            | `${id}-vertex-4`         | 左下后（x,y,z+d）                                                   |
+|            | `${id}-vertex-5`         | 右下后（x+w,y,z+d）                                                 |
+|            | `${id}-vertex-6`         | 右上后（x+w,y+h,z+d）                                               |
+|            | `${id}-vertex-7`         | 左上后（x,y+h,z+d）                                                 |
+| 边线       | `${id}-edge-0`           | 前下棱（0-1）                                                       |
+|            | `${id}-edge-1`           | 前右棱（1-2）                                                       |
+|            | `${id}-edge-2`           | 前上棱（2-3）                                                       |
+|            | `${id}-edge-3`           | 前左棱（3-0）                                                       |
+|            | `${id}-edge-4`           | 后下棱（4-5）                                                       |
+|            | `${id}-edge-5`           | 后右棱（5-6）                                                       |
+|            | `${id}-edge-6`           | 后上棱（6-7）                                                       |
+|            | `${id}-edge-7`           | 后左棱（7-4）                                                       |
+|            | `${id}-edge-8`           | 左下深棱（0-4）                                                     |
+|            | `${id}-edge-9`           | 右下深棱（1-5）                                                     |
+|            | `${id}-edge-10`          | 右上深棱（2-6）                                                     |
+|            | `${id}-edge-11`          | 左上深棱（3-7）                                                     |
+| 其他       | `${id}-center`           | 几何体中心点（仅 showCenters=true 时生成）                          |
 
-*   **`Projections.FRONT(x, y, z, config)` (正视图+深度叠加)**
-    *   **适用场景**：圆柱体、圆锥体、球体。让底面圆在视觉上呈现水平扁平的椭圆，符合小学数学教材的制图习惯。
-    *   **实现逻辑**：
-        *   $px = centerX + x$ (X轴无透视偏移)
-        *   $py = centerY - (y + z \cdot k)$ (Z轴深度直接叠加到高度上，表现为“近低远高”)
-    *   **Config 参数**：
-        *   `centerX`, `centerY`: 画布中心。
-        *   `k`: 深度缩放系数 (默认 `0.3` 或 `0.5`)。
+#### 边界/错误处理
+- 未传 `id` 或 `w/h/d` 时抛出错误：`drawCuboid: config.id is required.` / `config.w/h/d are required.`；
+- 未找到 SVG 容器时抛出错误：`drawCuboid: global svg not found.`。
 
-#### 3. 绘制长方体 `drawCuboid(config)`
+### 3.2 绘制圆柱体 `drawCylinder(config)`
+#### 功能说明
+绘制圆柱体，包含底面、顶面、侧面填充及侧面轮廓线，自动区分底面虚实弧，支持自定义分段数和平滑度。
+#### 使用场景
+圆柱、圆柱形容器、水杯等几何图形绘制。
+#### 详细参数
+| 参数名    | 类型       | 是否必填 | 默认值              | 说明                                                                 |
+|-----------|------------|----------|---------------------|----------------------------------------------------------------------|
+| id        | String     | 是       | -                   | SVG 组元素的唯一 ID 前缀                                             |
+| x         | Number     | 是       | -                   | 底面圆心的 3D X 坐标                                                |
+| y         | Number     | 是       | -                   | 底面圆心的 3D Y 坐标                                                |
+| z         | Number     | 是       | -                   | 底面圆心的 3D Z 坐标                                                |
+| r         | Number     | 是       | -                   | 圆柱半径                                                             |
+| h         | Number     | 是       | -                   | 圆柱高度                                                             |
+| centerX   | Number     | 是       | -                   | 画布中心点X坐标                                                      |
+| centerY   | Number     | 是       | -                   | 画布中心点Y坐标                                                      |
+| projectFn | Function   | 否       | Projections.FRONT   | 投影函数（强烈建议使用 FRONT）                                       |
+| styles    | Object     | 否       | {}                  | 覆盖 DEFAULT_STYLES 的配置（如 segments: 72 控制平滑度）            |
 
-*   **功能说明**：绘制长方体或正方体，自动计算面的法向量与可视性，正确处理虚实线遮挡关系。
-*   **使用场景**：正方体、长方体、容器、长方体切割等。
-*   **详细参数说明**：
-    *   `id` (String, **必填**): SVG 组元素的唯一 ID 前缀。
-    *   `x, y, z` (Number): **左下前**顶点的 3D 坐标 (即 Vertex 0 的位置)。
-    *   `w` (Number): 宽度 (X轴方向长度)。
-    *   `h` (Number): 高度 (Y轴方向长度)。
-    *   `d` (Number): 深度 (Z轴方向长度)。
-    *   `centerX, centerY` (Number): 画布中心点。
-    *   `projectFn` (Function): 投影函数 (建议使用 `Projections.OBLIQUE`)。
-    *   `styles` (Object): 覆盖 `DEFAULT_STYLES` 的配置。
+#### 返回元素 ID 及含义
+| 类型       | ID 格式                  | 说明                                                                 |
+|------------|--------------------------|----------------------------------------------------------------------|
+| 组         | `${id}`                  | 圆柱体根组                                                           |
+| 面         | `${id}-bottom-face`      | 底面圆形区域                                                         |
+|            | `${id}-top-face`         | 顶面圆形区域（默认带可见边线描边）                                   |
+|            | `${id}-side-face`        | 侧面矩形投影区域（用于整体高亮）                                     |
+| 边         | `${id}-bottom-front`     | 底面可见前半圆弧（实线）                                             |
+|            | `${id}-bottom-back`      | 底面被遮挡后半圆弧（虚线）                                           |
+|            | `${id}-side-0`           | 左侧侧面轮廓线（母线）                                               |
+|            | `${id}-side-1`           | 右侧侧面轮廓线（母线）                                               |
+| 调试点     | `${id}-center-bottom`    | 底面中心点（仅 showCenters=true 时生成）                             |
+|            | `${id}-center-top`       | 顶面中心点（仅 showCenters=true 时生成）                             |
+| 顶点       | `${id}-vertex-top-center`| 顶面中心点（仅 showVertices=true 时生成）                           |
+|            | `${id}-vertex-bottom-center` | 底面中心点（仅 showVertices=true 时生成）                         |
+|            | `${id}-vertex-top-0`     | 顶面圆周第一个点（仅 showVertices=true 时生成）                       |
+|            | `${id}-vertex-bottom-0`  | 底面圆周第一个点（仅 showVertices=true 时生成）                       |
 
-*   **返回元素 ID 及含义 (ID Mapping)**
-    
-    **1. 面 (Faces)**
-    *   `${id}-face-front` : 前表面 ($z=0$)
-    *   `${id}-face-back`  : 后表面 ($z=d$)
-    *   `${id}-face-right` : 右表面 ($x=w$)
-    *   `${id}-face-left`  : 左表面 ($x=0$)
-    *   `${id}-face-top`   : 上表面 ($y=h$)
-    *   `${id}-face-bottom`: 下表面 ($y=0$)
+#### 边界/错误处理
+- 未找到 SVG 容器时抛出错误：`drawCylinder: global svg not found.`；
+- segments 参数若 < 12，自动 fallback 到 72。
 
-    **2. 顶点 (Vertices) - 索引 0~7**
-    *(用于定位点，例如 p = drawCuboid 内部计算的 vertices[2])*
-    *   **前表面 ($z=0$)**:
-        *   `${id}-vertex-0`: **左下前** (基准点 x, y, z)
-        *   `${id}-vertex-1`: **右下前** (x+w, y, z)
-        *   `${id}-vertex-2`: **右上前** (x+w, y+h, z)
-        *   `${id}-vertex-3`: **左上前** (x, y+h, z)
-    *   **后表面 ($z=d$)**:
-        *   `${id}-vertex-4`: **左下后** (x, y, z+d)
-        *   `${id}-vertex-5`: **右下后** (x+w, y, z+d)
-        *   `${id}-vertex-6`: **右上后** (x+w, y+h, z+d)
-        *   `${id}-vertex-7`: **左上后** (x, y+h, z+d)
+### 3.3 绘制圆锥体 `drawCone(config)`
+#### 功能说明
+绘制圆锥体，包含底面圆、侧面填充、两条母线及中心轴线，自动区分底面虚实弧，支持调试中心点显示。
+#### 使用场景
+圆锥、漏斗、旋转体等几何图形绘制。
+#### 详细参数
+| 参数名    | 类型       | 是否必填 | 默认值              | 说明                                                                 |
+|-----------|------------|----------|---------------------|----------------------------------------------------------------------|
+| id        | String     | 是       | -                   | SVG 组元素的唯一 ID 前缀                                             |
+| x         | Number     | 是       | -                   | 底面圆心的 3D X 坐标                                                |
+| y         | Number     | 是       | -                   | 底面圆心的 3D Y 坐标                                                |
+| z         | Number     | 是       | -                   | 底面圆心的 3D Z 坐标                                                |
+| r         | Number     | 是       | -                   | 底面半径                                                             |
+| h         | Number     | 是       | -                   | 圆锥高度（顶点坐标为 y+h）                                           |
+| centerX   | Number     | 是       | -                   | 画布中心点X坐标                                                      |
+| centerY   | Number     | 是       | -                   | 画布中心点Y坐标                                                      |
+| projectFn | Function   | 否       | Projections.FRONT   | 投影函数（强烈建议使用 FRONT）                                       |
+| styles    | Object     | 否       | {}                  | 覆盖 DEFAULT_STYLES 的配置                                          |
 
-    **3. 边线 (Edges) - 索引 0~11**
-    *(用于高亮特定棱，例如高亮棱长)*
-    *   **前表面边框**:
-        *   `${id}-edge-0`: **前下棱** (连接 0-1)
-        *   `${id}-edge-1`: **前右棱** (连接 1-2)
-        *   `${id}-edge-2`: **前上棱** (连接 2-3)
-        *   `${id}-edge-3`: **前左棱** (连接 3-0)
-    *   **后表面边框**:
-        *   `${id}-edge-4`: **后下棱** (连接 4-5)
-        *   `${id}-edge-5`: **后右棱** (连接 5-6)
-        *   `${id}-edge-6`: **后上棱** (连接 6-7)
-        *   `${id}-edge-7`: **后左棱** (连接 7-4)
-    *   **纵深连接棱 (前后连接)**:
-        *   `${id}-edge-8`:  **左下深** (连接 0-4)
-        *   `${id}-edge-9`:  **右下深** (连接 1-5)
-        *   `${id}-edge-10`: **右上深** (连接 2-6)
-        *   `${id}-edge-11`: **左上深** (连接 3-7)
+#### 返回元素 ID 及含义
+| 类型       | ID 格式                  | 说明                                                                 |
+|------------|--------------------------|----------------------------------------------------------------------|
+| 组         | `${id}`                  | 圆锥体根组                                                           |
+| 面         | `${id}-base-face`        | 底面圆形区域                                                         |
+|            | `${id}-body-face`        | 侧面三角形投影区域（仅 faceFill 非 none 时生成）                     |
+| 边         | `${id}-base-front`       | 底面前半弧（实线）                                                   |
+|            | `${id}-base-back`        | 底面后半弧（虚线）                                                   |
+|            | `${id}-side-0`           | 左侧母线（轮廓线）                                                   |
+|            | `${id}-side-1`           | 右侧母线（轮廓线）                                                   |
+| 关键点     | `${id}-v-apex`           | 圆锥顶点（仅 showVertices=true 时生成）                             |
+|            | `${id}-v-center`         | 底面圆心（仅 showVertices=true 时生成）                             |
+|            | `${id}-v-tan1`           | 底面左切点（仅 showVertices=true 时生成）                           |
+|            | `${id}-v-tan2`           | 底面右切点（仅 showVertices=true 时生成）                           |
+| 轴         | `${id}-axis`             | 顶点到底面圆心的高线（默认虚线，stroke-width=1，仅 showVertices=true 时生成） |
+| 调试点     | `${id}-center-base`      | 底面中心点（仅 showCenters=true 时生成）                             |
+|            | `${id}-center-apex`      | 顶点中心点（仅 showCenters=true 时生成）                             |
 
-    **4. 其他**
-    *   `${id}-center`: 几何体中心点。
+#### 边界/错误处理
+- 未找到 SVG 容器时抛出错误：`drawCone: global svg not found.`；
+- segments 参数若 < 12，自动 fallback 到 72；
+- 底面线段长度 < 0.001 时返回 `null`。
 
-#### 4. 绘制圆柱体 `drawCylinder(config)`
+### 3.4 绘制箭头 `drawArrow(config)`
+#### 功能说明
+绘制二维直线箭头，包含箭身（直线）和箭头（三角形），支持自定义箭头尺寸和样式。
+#### 使用场景
+指示运动方向、标注切割位置、指引视线等。
+#### 详细参数
+| 参数名      | 类型       | 是否必填 | 默认值              | 说明                                                                 |
+|-------------|------------|----------|---------------------|----------------------------------------------------------------------|
+| id          | String     | 否       | "arrow"             | SVG 组元素的唯一 ID 前缀                                             |
+| x1          | Number     | 否       | 100                 | 起点 SVG 屏幕 X 坐标                                                 |
+| y1          | Number     | 否       | 100                 | 起点 SVG 屏幕 Y 坐标                                                 |
+| x2          | Number     | 否       | 300                 | 终点 SVG 屏幕 X 坐标（箭尖指向端）                                   |
+| y2          | Number     | 否       | 100                 | 终点 SVG 屏幕 Y 坐标                                                 |
+| headLength  | Number     | 否       | -                   | 箭头三角形长度（优先级高于 styles.arrowSize）                         |
+| headWidth   | Number     | 否       | -                   | 箭头三角形底宽（优先级高于 styles.arrowWidth*2）                     |
+| styles      | Object     | 否       | {}                  | 覆盖 DEFAULT_ANNOTATION_STYLES 的配置                                |
 
-*   **功能说明**：绘制圆柱体，包含底面、顶面、侧面填充及侧面轮廓线。
-*   **使用场景**：圆柱、圆柱形容器、溢出的水杯等。
-*   **详细参数说明**：
-    *   `id` (String, **必填**): 唯一 ID 前缀。
-    *   `x, y, z` (Number): **底面圆心**的 3D 坐标。
-    *   `r` (Number): 圆柱半径。
-    *   `h` (Number): 圆柱高度。
-    *   `centerX, centerY` (Number): 画布中心。
-    *   `projectFn` (Function): 投影函数 (强烈建议使用 `Projections.FRONT`)。
-    *   `styles` (Object): 覆盖配置 (如 `segments: 72` 控制平滑度)。
-*   **返回元素 ID 及含义**：
-    *   **组**: `${id}`
-    *   **面**:
-        *   `${id}-bottom-face`: 底面圆形区域。
-        *   `${id}-top-face`: 顶面圆形区域。
-        *   `${id}-side-face`: 侧面矩形投影区域 (用于整体高亮)。
-    *   **边**:
-        *   `${id}-bottom-front`: 底面可见的前半圆弧 (实线)。
-        *   `${id}-bottom-back`: 底面被遮挡的后半圆弧 (虚线)。
-        *   `${id}-side-0`, `${id}-side-1`: 左右两条侧面轮廓线 (母线)。
-    *   **调试点**: `${id}-center-bottom`, `${id}-center-top`。
+#### 返回元素 ID 及含义
+| 类型       | ID 格式                  | 说明                                                                 |
+|------------|--------------------------|----------------------------------------------------------------------|
+| 组         | `${id}`                  | 箭头根组                                                             |
+| 部件       | `${id}-shaft`            | 箭身（直线）                                                         |
+|            | `${id}-head`             | 箭头（三角形，描边宽度为 Math.max(1, (strokeWidth||1)*0.6)）         |
 
-#### 5. 绘制圆锥体 `drawCone(config)`
+#### 边界/错误处理
+- 线段长度 < 0.001 时返回 `null`；
+- 未找到 SVG 容器时抛出错误：`drawArrow: global svg not found.`；
+- dashArray 参数代码中被注释，暂不生效。
 
-*   **功能说明**：绘制圆锥体，包含底面圆、侧面填充及两条母线。
-*   **使用场景**：圆锥、漏斗、旋转体等。
-*   **详细参数说明**：
-    *   `id` (String, **必填**): 唯一 ID 前缀。
-    *   `x, y, z` (Number): **底面圆心**的 3D 坐标。
-    *   `r` (Number): 底面半径。
-    *   `h` (Number): 圆锥高度 (顶点坐标自动计算为 $y+h$)。
-    *   `centerX, centerY` (Number): 画布中心。
-    *   `projectFn` (Function): 投影函数 (强烈建议使用 `Projections.FRONT`)。
-    *   `styles` (Object): 覆盖配置。
-*   **返回元素 ID 及含义**：
-    *   **组**: `${id}`
-    *   **面**:
-        *   `${id}-base-face`: 底面圆形区域。
-        *   `${id}-body-face`: 侧面三角形投影区域 (用于高亮主体)。
-    *   **边**:
-        *   `${id}-base-front`: 底面前半弧 (实线)。
-        *   `${id}-base-back`: 底面后半弧 (虚线)。
-        *   `${id}-side-0`, `${id}-side-1`: 两侧母线。
-    *   **关键点**:
-        *   `${id}-v-apex`: 顶点。
-        *   `${id}-v-center`: 底面圆心。
-    *   **轴**: `${id}-axis`: 顶点到底面圆心的高线 (默认为虚线)。
+### 3.5 绘制尺寸线标注 `drawDimensionLine(config)`
+#### 功能说明
+绘制工程制图风格的“工”字形尺寸标注，支持 3D 坐标自动投影，文字自动对齐且带白色光晕，文本自带 `smart-label` 类支持防重叠。
+#### 使用场景
+标注长方体长宽高、棱长、圆柱高度、水深等外部尺寸。
+#### 详细参数
+| 参数名    | 类型       | 是否必填 | 默认值              | 说明                                                                 |
+|-----------|------------|----------|---------------------|----------------------------------------------------------------------|
+| id        | String     | 是       | -                   | SVG 组元素的唯一 ID 前缀                                             |
+| p1        | Object     | 是       | -                   | 起始点 3D 坐标 {x,y,z}                                               |
+| p2        | Object     | 是       | -                   | 结束点 3D 坐标 {x,y,z}                                               |
+| centerX   | Number     | 是       | -                   | 画布中心点X坐标                                                      |
+| centerY   | Number     | 是       | -                   | 画布中心点Y坐标                                                      |
+| direction | String     | 是       | -                   | 延伸线方向："上" | "下" | "左" | "右"                          |
+| text      | String     | 是       | -                   | 标注文本（如 "8cm"）                                                 |
+| projectFn | Function   | 否       | Projections.OBLIQUE | 投影函数（需与被标注物体一致）                                       |
+| styles    | Object     | 否       | {}                  | 覆盖 DEFAULT_ANNOTATION_STYLES 的配置（ext_length/textOffset 等）    |
 
-#### 6. 绘制箭头 `drawArrow(config)`
+#### 返回元素 ID 及含义
+| 类型       | ID 格式                  | 说明                                                                 |
+|------------|--------------------------|----------------------------------------------------------------------|
+| 组         | `${id}`                  | 尺寸标注根组（class="annotation-group"）                            |
+| 部件       | `${id}-ext`              | 两条延伸线路径                                                       |
+|            | `${id}-dim`              | 主尺寸线（直线）                                                     |
+|            | `${id}-arrows`           | 双向箭头（路径）                                                     |
+|            | `${id}-text`             | 标注文本（带 smart-label 类，paint-order: stroke 先描边后填充）       |
 
-*   **功能说明**：绘制二维或三维投影后的直线箭头。
-*   **使用场景**：指示运动方向、标注切割位置、指引视线。
-*   **实现方法**：基于两点坐标计算方向向量，绘制直线杆身 (Shaft) 和三角形箭周 (Head)。
-*   **详细参数说明**：
-    *   `id` (String, **必填**)。
-    *   `x1, y1` (Number): 起点 SVG 屏幕坐标。
-    *   `x2, y2` (Number): 终点 SVG 屏幕坐标 (箭头指向端)。
-    *   `headLength` (Number): 箭头三角形的长度 (优先级高于 styles.arrowSize)。
-    *   `headWidth` (Number): 箭头三角形底宽 (优先级高于 styles.arrowWidth)。
-    *   `styles` (Object): 覆盖 `DEFAULT_ANNOTATION_STYLES`。
-*   **返回元素 ID 及含义**：
-    *   **组**: `${id}`
-    *   **部件**: `${id}-shaft` (箭身 line), `${id}-head` (箭头 polygon)。
+#### 关键说明
+- 文本自动根据法向量判断对齐方式（start/middle/end），避免压线；
+- 文本注入 dataset 数据（nx/ny/ux/uy/ox/oy/limit/parentId），支持 autoAvoidOverlap 算法。
 
-#### 7. 绘制尺寸线标注 `drawDimensionLine(config)`
+#### 边界/错误处理
+- 未找到 SVG 容器时抛出错误：`drawDimensionLine: global svg not found.`；
+- 测量线段长度 < 0.001 时返回 `null`。
 
-*   **功能说明**：绘制工程制图风格的尺寸标注（两条垂直延伸线 + 一条双向箭头线 + 居中文字）。
-*   **使用场景**：标注长方体的长宽高、棱长、圆柱的高、水深等外部尺寸。
-*   **详细参数说明**：
-    *   `id` (String, **必填**)。
-    *   `p1`, `p2` (Object {x, y, z}): **3D 测量起止点**。函数会自动投影这两个点。
-    *   `centerX`, `centerY` (Number): 画布中心。
-    *   `direction` (String): `"上" | "下" | "左" | "右"`。
-        *   决定延伸线向哪个方向延伸，以及文字相对于线的偏移方向。
-        *   例如：标注底部水平边，direction选 "下"。
-    *   `text` (String): 显示的文本 (如 "8cm")。
-    *   `projectFn` (Function): 投影函数 (必须与被标注物体的投影方式一致)。
-    *   `styles` (Object):
-        *   `ext_length`: 延伸线总长 (默认 25)。
-        *   `gap`: 延伸线起点与测量点的间距 (默认 5，避免贴在物体上)。
-        *   `textOffset`: 文字偏移量。
-*   **返回元素 ID 及含义**：
-    *   **组**: `${id}` (带有 class="annotation-group")
-    *   **部件**:
-        *   `${id}-ext`: 两条延伸线路径 (path)。
-        *   `${id}-dim`: 主尺寸线 (line)。
-        *   `${id}-arrows`: 双向箭头 (path)。
-        *   `${id}-text`: 标注文本 (text)。
+### 3.7 绘制原地/辅助线标注 `drawDirectLabel(config)`
+#### 功能说明
+绘制一条连接线（默认虚线）并附带水平文字，文字沿法向偏移避免压线，文本自带 `smart-label` 类支持防重叠。
+#### 使用场景
+标注圆柱/圆锥半径(R)、直径(D)、内部高度（圆锥高）、物体内部无法使用延伸线的尺寸。
+#### 详细参数
+| 参数名    | 类型       | 是否必填 | 默认值              | 说明                                                                 |
+|-----------|------------|----------|---------------------|----------------------------------------------------------------------|
+| id        | String     | 是       | -                   | SVG 组元素的唯一 ID 前缀                                             |
+| p1        | Object     | 是       | -                   | 连接线起点 3D 坐标 {x,y,z}                                           |
+| p2        | Object     | 是       | -                   | 连接线终点 3D 坐标 {x,y,z}                                           |
+| text      | String     | 是       | -                   | 标注文本                                                             |
+| centerX   | Number     | 是       | -                   | 画布中心点X坐标                                                      |
+| centerY   | Number     | 是       | -                   | 画布中心点Y坐标                                                      |
+| projectFn | Function   | 否       | Projections.OBLIQUE | 投影函数                                                             |
+| styles    | Object     | 否       | {}                  | 覆盖 DEFAULT_ANNOTATION_STYLES 的配置（directDashArray/textOffset 等） |
 
-#### 8. 绘制辅助线标注 `drawDirectLabel(config)`
+#### 返回元素 ID 及含义
+| 类型       | ID 格式                  | 说明                                                                 |
+|------------|--------------------------|----------------------------------------------------------------------|
+| 组         | `${id}`                  | 原地标注根组                                                         |
+| 部件       | `${id}-line`             | 连接线（默认虚线 directDashArray="4,4"）                             |
+|            | `${id}-text`             | 标注文本（水平显示，带 smart-label 类）                               |
 
-*   **功能说明**：绘制一条连接线（通常为虚线）并附带文字，文字可根据线段斜率自动旋转。
-*   **使用场景**：标注圆柱/圆锥的半径(r)、内部高(h)、或者在物体内部无法使用延伸线的场景。
-*   **详细参数说明**：
-    *   `id` (String, **必填**)。
-    *   `p1`, `p2` (Object {x, y, z}): **3D 连接线端点** (如圆心到边缘)。
-    *   `text` (String): 标注文本。
-    *   `centerX`, `centerY` (Number): 画布中心。
-    *   `projectFn` (Function): 投影函数。
-    *   `styles` (Object):
-        *   `directDashArray`: 虚线样式 (默认 "4,4")。
-        *   `textOffset`: 文字沿法向的偏移距离 (控制文字离线有多远)。
-        *   `textBackground`: `true` 表示给文字加白色背景遮罩，防止文字与虚线重叠。
-*   **返回元素 ID 及含义**：
-    *   **组**: `${id}`
-    *   **部件**: `${id}-line` (连接线 line), `${id}-text` (文本 text)。
+#### 关键说明
+- 文字始终水平显示，不随连接线旋转；
+- 文本注入 dataset 数据（nx/ny/ux/uy/ox/oy/limit/parentId），支持 autoAvoidOverlap 算法；
+- 代码中已移除 `textBackground` 相关逻辑，该参数无效。
 
-#### 9. 自动防重叠 `autoAvoidOverlap(svgRoot)`
+#### 边界/错误处理
+- 未找到 SVG 容器时抛出错误：`drawDirectLabel: global svg not found.`；
+- 连接线长度 < 0.001 时返回 `null`。
 
-*   **功能说明**：算法会自动检测带有 `.smart-label` 类名（`drawDimensionLine` 生成的文本自带此类）的文本元素，如果它们遮挡了通过 `path`, `line`, `polygon` 绘制的几何图形，会自动尝试向四周微调位置。
-*   **使用场景**：通常不需要手动调用。但在步骤非常复杂、标注极多的情况下，可以在 Step 脚本的末尾显式调用一次 `autoAvoidOverlap(window.mainSvg)` 以确保文字清晰可见。
+### 3.8 绘制纯文字标注 `drawTextLabel(config)`
+#### 功能说明
+在 3D 坐标投影点处绘制纯水平文字，支持智能对齐和防重叠，文字带光晕增强可读性。
+#### 使用场景
+标记顶点/面名称、整体量例如周长、面积、体积、添加无需引线的补充说明、物体周围的文字注释。
+#### 详细参数
+| 参数名    | 类型       | 是否必填 | 默认值              | 说明                                                                 |
+|-----------|------------|----------|---------------------|----------------------------------------------------------------------|
+| id        | String     | 是       | -                   | SVG 组元素的唯一 ID 前缀                                             |
+| text      | String     | 是       | -                   | 标注文本                                                             |
+| x         | Number     | 是       | -                   | 锚点 3D X 坐标                                                       |
+| y         | Number     | 是       | -                   | 锚点 3D Y 坐标                                                       |
+| z         | Number     | 是       | -                   | 锚点 3D Z 坐标                                                       |
+| centerX   | Number     | 是       | -                   | 画布中心点X坐标                                                      |
+| centerY   | Number     | 是       | -                   | 画布中心点Y坐标                                                      |
+| projectFn | Function   | 否       | Projections.OBLIQUE | 投影函数                                                             |
+| styles    | Object     | 否       | {}                  | 样式覆盖，详见下表                                                   |
+
+##### styles 扩展参数
+| 参数名      | 默认值   | 说明                                                                 |
+|-------------|----------|----------------------------------------------------------------------|
+| dx          | 0        | 屏幕像素水平偏移（正值右移，负值左移）                               |
+| dy          | 0        | 屏幕像素垂直偏移（正值下移，负值上移）                               |
+| anchor      | "middle" | 强制文本对齐方式（start/middle/end），未指定时根据 dx 自动计算       |
+| baseline    | "middle" | 文本垂直对齐方式                                                     |
+| avoidLimit  | 40       | autoAvoidOverlap 算法的最大移动距离                                  |
+| fontSize    | 14       | 继承自 DEFAULT_ANNOTATION_STYLES                                    |
+| haloStroke  | "white"  | 文字光晕颜色                                                         |
+| haloWidth   | 3        | 文字光晕宽度                                                         |
+
+#### 返回元素 ID 及含义
+| 类型       | ID 格式                  | 说明                                                                 |
+|------------|--------------------------|----------------------------------------------------------------------|
+| 组         | `${id}`                  | 纯文字标注根组                                                       |
+| 部件       | `${id}-text`             | 文本元素（水平显示，paint-order: stroke，带 smart-label 类）         |
+
+#### 关键说明
+- 智能对齐：dx 绝对值 > 5 且未指定 anchor 时，dx>0 设为 start，dx<0 设为 end；
+- 文本注入 dataset 数据（nx/ny/ox/oy/limit/parentId），支持 autoAvoidOverlap 算法；
+- 光晕使用 paint-order: stroke 确保文字清晰，不会被光晕覆盖。
+
+#### 边界/错误处理
+- 未找到 SVG 容器时抛出错误：`drawTextLabel: global svg not found.`。
+
+## 4. 自动防重叠函数 `autoAvoidOverlap(svgRoot, opts)`
+#### 功能说明
+自动检测带 `.smart-label` 类的文本元素，若遮挡几何图形（path/line/polygon/rect/circle/ellipse 等），则向四周微调位置，避免重叠。
+#### 使用场景
+标注密集、文字与图形重叠时调用，建议在所有标注绘制完成后执行。
+#### 详细参数
+| 参数名    | 类型       | 是否必填 | 默认值              | 说明                                                                 |
+|-----------|------------|----------|---------------------|----------------------------------------------------------------------|
+| svgRoot   | SVGElement | 否       | window.mainSvg      | 目标 SVG 容器                                                       |
+| opts      | Object     | 否       | {}                  | 算法参数，详见下表                                                   |
+
+##### opts 算法参数
+| 参数名                  | 默认值 | 说明                                                                 |
+|-------------------------|--------|----------------------------------------------------------------------|
+| MAX_STEPS               | 28     | 每个方向的最大移动步数                                               |
+| STEP_SIZE               | 4      | 每步移动像素距离                                                     |
+| PADDING                 | 2      | 碰撞检测的额外内边距                                                 |
+| PASSES                  | 2      | 算法迭代次数                                                         |
+| TANGENT_MAX_DIST        | 120    | 切线方向最大移动距离                                                 |
+| NORMAL_SOFT_LIMIT       | 28     | 法线方向软限制距离                                                   |
+| NORMAL_OVER_PENALTY     | 1.6    | 超过软限制后的惩罚系数                                               |
+| PENALTY_NORMAL          | 1.0    | 法线方向移动成本系数                                                 |
+| PENALTY_TANGENT         | 0.95   | 切线方向移动成本系数                                                 |
+| PENALTY_NORMAL_OPP      | 1.15   | 反法线方向移动成本系数                                               |
+| PENALTY_DIAG            | 1.05   | 对角线方向移动成本系数                                               |
+
+#### 关键说明
+- 仅处理 `.smart-label` 类文本，`drawDimensionLine`/`drawDirectLabel`/`drawTextLabel` 生成的文本默认带此类；
+- 碰撞检测忽略隐藏元素（display:none/visibility:hidden/opacity≤0）；
+- 同组元素（parentId 相同）不会互相避让；
+- 移动优先级：成本系数越低的方向优先移动，优先保持文本在原方向附近。
+
+#### 调用示例
+```javascript
+// 所有标注绘制完成后调用
+autoAvoidOverlap(window.mainSvg, {
+  MAX_STEPS: 30,
+  STEP_SIZE: 3
+});
+```
+
+## 总结
+1. **核心配置**：`DEFAULT_STYLES` 控制几何体样式，`DEFAULT_ANNOTATION_STYLES` 控制标注样式，均可通过函数 `styles` 参数覆盖；
+2. **投影选择**：长方体用 `OBLIQUE`，圆柱/圆锥用 `FRONT`，确保视觉符合工程制图习惯；
+3. **防重叠**：带 `.smart-label` 的文本支持 `autoAvoidOverlap`，建议标注密集时调用；
+4. **错误处理**：所有函数均校验 SVG 容器和必填参数，缺失时抛出明确错误，便于调试；
+5. **样式优先级**：自定义 `styles` > 默认配置。
 
 ### 常见画法
 
@@ -492,7 +670,7 @@ const SCALE = 14;   // 1分米 = 14像素
 const S = 8 * SCALE; // 棱长 8分米 = 112px
 
 const GAP_Y = 80;   // 右侧上下长方体的垂直间距
-const DIST_X = 80;  // 左右物体与中心线的距离
+const DIST_X = 100; // 左右物体与中心线的距离
 
 // 计算位置坐标 (全局)
 const x_left = -DIST_X - S; // 左侧正方体 X (右边缘在 -DIST_X)
@@ -521,29 +699,28 @@ drawDimensionLine({
     text: "8分米",
     centerX: CX, centerY: CY,
     styles: {
-        gap: 15,
         textOffset: 20
     }
 });
 
 // 1.2 绘制切割虚线环 (Rectangular Loop)
-// 手动创建元素时，使用 svg 变量挂载
-const p_fl = Projections.OBLIQUE(x_left,     h_cut, 0, { centerX: CX, centerY: CY });
-const p_fr = Projections.OBLIQUE(x_left + S, h_cut, 0, { centerX: CX, centerY: CY });
-const p_br = Projections.OBLIQUE(x_left + S, h_cut, S, { centerX: CX, centerY: CY });
-const p_bl = Projections.OBLIQUE(x_left,     h_cut, S, { centerX: CX, centerY: CY });
+// 手动计算四个顶点的投影
+const p_fl = Projections.OBLIQUE(x_left,     h_cut, 0, { centerX: CX, centerY: CY }); // 前左
+const p_fr = Projections.OBLIQUE(x_left + S, h_cut, 0, { centerX: CX, centerY: CY }); // 前右
+const p_br = Projections.OBLIQUE(x_left + S, h_cut, S, { centerX: CX, centerY: CY }); // 后右
+const p_bl = Projections.OBLIQUE(x_left,     h_cut, S, { centerX: CX, centerY: CY }); // 后左
 
 const cutGroup = document.createElementNS(SVG_NS, "g");
 cutGroup.setAttribute("id", "cut-lines");
+
 const cutPoly = document.createElementNS(SVG_NS, "polygon");
 cutPoly.setAttribute("points", `${p_fl.px},${p_fl.py} ${p_fr.px},${p_fr.py} ${p_br.px},${p_br.py} ${p_bl.px},${p_bl.py}`);
 cutPoly.setAttribute("fill", "rgba(225, 29, 72, 0.1)");
-cutPoly.setAttribute("stroke", "#e11d48");
+cutPoly.setAttribute("stroke", "#e11d48"); // 红色
 cutPoly.setAttribute("stroke-width", "2");
-cutPoly.setAttribute("stroke-dasharray", "6,4");
+cutPoly.setAttribute("stroke-dasharray", "6,4"); // 虚线
 cutGroup.appendChild(cutPoly);
 
-// 挂载到 svg 容器
 svg.appendChild(cutGroup);
 
 // 2. 右侧两个分离的长方体 (Right Cuboids)
@@ -573,15 +750,13 @@ drawCuboid({
 });
 
 // 3. 水平指示箭头
-// 位置逻辑：设定在物体深度的一半 (z=S/2)，并在此深度的平面上计算左右留白
-const arrowMargin = 30; // 留白距离
-const arrowZ = S / 2;   // 深度中点
-const arrowY = S / 2;   // 高度中点
+// 位置逻辑：设定在物体深度的一半 (z=S/2)，高度中点
+const arrowY = S / 2;
+const arrowZ = S / 2;
 
-// 左起点：左侧物体右边缘 + margin
-const pArrowStart = Projections.OBLIQUE(x_left + S + arrowMargin, arrowY, arrowZ, { centerX: CX, centerY: CY });
-// 右终点：右侧物体左边缘 - margin
-const pArrowEnd   = Projections.OBLIQUE(x_right - arrowMargin,    arrowY, arrowZ, { centerX: CX, centerY: CY });
+// 计算起点和终点，确保箭头水平
+const pArrowStart = Projections.OBLIQUE(x_left + S + 20, arrowY, arrowZ, { centerX: CX, centerY: CY });
+const pArrowEnd   = Projections.OBLIQUE(x_right - 20,    arrowY, arrowZ, { centerX: CX, centerY: CY });
 
 drawArrow({
     id: "arrow-process",
@@ -594,6 +769,7 @@ drawArrow({
         strokeWidth: 2.5
     }
 });
+autoAvoidOverlap(svg)
 </script>
 
 <script id="script_step_10">
@@ -619,6 +795,7 @@ if (faceTopBottom) {
     faceTopBottom.setAttribute("stroke", strokeColor);
     faceTopBottom.setAttribute("stroke-width", "2");
 }
+autoAvoidOverlap(svg)
 </script>
 
 <script id="script_step_15">
@@ -628,6 +805,7 @@ if (faceTopBottom) {
 // ==========================================
 
 // 1. 标注下方长方体切面 (顶面)
+// 标注位置：切面的右侧边 (x=x_right+S)
 drawDimensionLine({
     id: "dim-cut-bottom",
     p1: { x: x_right + S, y: h_cut, z: 0 },
@@ -638,7 +816,7 @@ drawDimensionLine({
 });
 
 // 2. 标注上方长方体切面 (底面)
-// 上方长方体的底面高度 = h_cut + GAP_Y (即 y_top_start)
+// 上方长方体的底面高度 = h_cut + GAP_Y
 const y_cut_top = h_cut + GAP_Y;
 
 drawDimensionLine({
@@ -649,6 +827,7 @@ drawDimensionLine({
     text: "8分米",
     centerX: CX, centerY: CY,
 });
+autoAvoidOverlap(svg)
 </script>
 ```
 
@@ -691,19 +870,19 @@ drawDimensionLine({
     "drawCuboid",
     "drawCylinder",
     "drawArrow",
-    "drawDimensionLine"
+    "drawDimensionLine",
+    "drawTextLabel"
 ]
 ```
 
 【每一步的输出】
-
 ```html
 <script id="script_step_7">
 // ==========================================
 // Step 7: 绘制初始场景 (左右对比图)
 // ==========================================
 
-// 1. 定义全局布局常量 (调整版)
+// 1. 定义全局布局常量
 const CY = 420;       // 地面基准线
 const SCALE = 18;     // 1cm = 18px
 const S = 8 * SCALE;  // 棱长 8cm = 144px
@@ -711,17 +890,12 @@ const H_WATER = 6.5 * SCALE; // 水深 6.5cm
 const H_RISE = 1.5 * SCALE;  // 上升 1.5cm
 
 // 调整中心点，拉近距离
-// 画布宽 960，两物体大概各占 200px (含透视)
-// 左图中心从 280 -> 340
-// 右图中心从 720 -> 620
-// 间距从 440 缩小到 280
 const CX_LEFT = 340;
 const CX_RIGHT = 620;
 
 // --- 左侧：放入物体前 ---
 
 // 1.1 容器 (Container)
-// z=0 为前表面, z=S 为后表面
 drawCuboid({
     id: "container-left",
     x: -S/2, y: 0, z: 0,
@@ -735,7 +909,6 @@ drawCuboid({
 });
 
 // 1.2 内部水体 (Water) - 实体部分
-// 仅填充颜色，不描边，轮廓由后面的虚线层负责
 drawCuboid({
     id: "water-left",
     x: -S/2, y: 0, z: 0,
@@ -749,27 +922,24 @@ drawCuboid({
 
 // 1.3 绘制虚线水面 (Water Level Dashed Lines)
 // 计算水面的四个顶点 (y = H_WATER)
-const wl_p1 = Projections.OBLIQUE(-S/2, H_WATER, 0, { centerX: CX_LEFT, centerY: CY }); // 前左上
-const wl_p2 = Projections.OBLIQUE(S/2,  H_WATER, 0, { centerX: CX_LEFT, centerY: CY }); // 前右上
-const wl_p3 = Projections.OBLIQUE(S/2,  H_WATER, S, { centerX: CX_LEFT, centerY: CY }); // 后右上
-const wl_p4 = Projections.OBLIQUE(-S/2, H_WATER, S, { centerX: CX_LEFT, centerY: CY }); // 后左上
+const wl_p1 = Projections.OBLIQUE(-S/2, H_WATER, 0, { centerX: CX_LEFT, centerY: CY });
+const wl_p2 = Projections.OBLIQUE(S/2,  H_WATER, 0, { centerX: CX_LEFT, centerY: CY });
+const wl_p3 = Projections.OBLIQUE(S/2,  H_WATER, S, { centerX: CX_LEFT, centerY: CY });
+const wl_p4 = Projections.OBLIQUE(-S/2, H_WATER, S, { centerX: CX_LEFT, centerY: CY });
 
 const waterLevelGroup = document.createElementNS(SVG_NS, "g");
 waterLevelGroup.setAttribute("id", "water-level-lines-left");
-
-// 水面多边形 (虚线描边)
 const waterPath = document.createElementNS(SVG_NS, "polygon");
 waterPath.setAttribute("id", "water-surface-poly-left");
 waterPath.setAttribute("points", `${wl_p1.px},${wl_p1.py} ${wl_p2.px},${wl_p2.py} ${wl_p3.px},${wl_p3.py} ${wl_p4.px},${wl_p4.py}`);
-waterPath.setAttribute("fill", "rgba(186, 230, 253, 0.2)"); // 水面略淡
+waterPath.setAttribute("fill", "rgba(186, 230, 253, 0.2)");
 waterPath.setAttribute("stroke", "#0ea5e9");
 waterPath.setAttribute("stroke-width", "2");
-waterPath.setAttribute("stroke-dasharray", "5,4"); // 虚线效果
+waterPath.setAttribute("stroke-dasharray", "5,4");
 waterLevelGroup.appendChild(waterPath);
 svg.appendChild(waterLevelGroup);
 
-// 1.4 标注棱长 8cm (在前方面板的下方)
-// p1, p2 的 z=0 确保是前表面
+// 1.4 标注棱长 8cm
 drawDimensionLine({
     id: "dim-len-8cm",
     p1: { x: -S/2, y: 0, z: 0 },
@@ -782,7 +952,7 @@ drawDimensionLine({
 // 1.5 标注水深 h=6.5cm
 drawDimensionLine({
     id: "dim-water-h",
-    p1: { x: S/2, y: 0,       z: S }, // z=S/2 在侧面中间
+    p1: { x: S/2, y: 0,       z: S }, 
     p2: { x: S/2, y: H_WATER, z: S },
     direction: "右",
     text: "h=6.5cm",
@@ -799,12 +969,12 @@ drawCuboid({
     w: S/2, h: S/4, d: S/2,
     centerX: CX_RIGHT, centerY: CY,
     styles: {
-        faceFill: "rgba(168, 85, 24, 0.6)", // 棕色
+        faceFill: "rgba(168, 85, 24, 0.6)", 
         edgeStroke: "#92400e"
     }
 });
 
-// 2.2 基础水体 (Base Water)
+// 2.2 基础水体
 drawCuboid({
     id: "water-right-base",
     x: -S/2, y: 0, z: 0,
@@ -816,7 +986,7 @@ drawCuboid({
     }
 });
 
-// 2.3 上升水体 (Rise Water) - 独立ID方便高亮
+// 2.3 上升水体
 drawCuboid({
     id: "water-right-rise",
     x: -S/2, y: H_WATER, z: 0,
@@ -824,7 +994,7 @@ drawCuboid({
     centerX: CX_RIGHT, centerY: CY,
     styles: {
         faceFill: "rgba(186, 230, 253, 0.5)",
-        edgeStroke: "#7dd3fc", // 轻微描边
+        edgeStroke: "#7dd3fc",
         edgeWidth: 1
     }
 });
@@ -843,16 +1013,15 @@ drawCuboid({
 });
 
 // 2.5 溢出杯子 (Cup)
-// 调整位置：S/2 (容器边缘) + 90 (加大偏移，避免与左侧视觉粘连)
 const CUP_X = S/2 + 90; 
 const CUP_R = 25;
 const CUP_H = 45;
 
-// 杯内水 (45mL)
+// 杯内水
 drawCylinder({
     id: "cup-water",
     x: CUP_X, y: 0, z: 0,
-    r: CUP_R - 2, h: 35, // 假设水高
+    r: CUP_R - 2, h: 35, 
     centerX: CX_RIGHT, centerY: CY,
     styles: {
         faceFill: "rgba(186, 230, 253, 0.8)",
@@ -873,20 +1042,22 @@ drawCylinder({
     }
 });
 
-// 2.6 纯文字标注 "45mL"
-// 使用 Front 投影获取杯子上方坐标
-const cupTextPos = Projections.FRONT(CUP_X, 42, 0, { centerX: CX_RIGHT, centerY: CY });
-const text45 = document.createElementNS(SVG_NS, "text");
-text45.setAttribute("id", "text-45ml");
-text45.setAttribute("x", cupTextPos.px);
-text45.setAttribute("y", cupTextPos.py - 10);
-text45.setAttribute("text-anchor", "middle");
-text45.setAttribute("fill", "#333");
-text45.setAttribute("font-size", "14");
-text45.setAttribute("font-weight", "bold");
-text45.textContent = "45mL";
-svg.appendChild(text45);
-
+// 2.6 纯文字标注 "45mL" (使用 drawTextLabel)
+drawTextLabel({
+    id: "text-45ml",
+    text: "45mL",
+    x: CUP_X, y: 42, z: 0,
+    centerX: CX_RIGHT, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        textFill: "#333",
+        dy: -10,
+        anchor: "middle",
+        haloStroke: "white",
+        haloWidth: 3
+    }
+});
+autoAvoidOverlap(svg)
 </script>
 
 <script id="script_step_9">
@@ -894,10 +1065,9 @@ svg.appendChild(text45);
 // Step 9: 高亮上升水体和溢出水
 // ==========================================
 
-// 1. 高亮上升部分 (Water Rise)
+// 1. 高亮上升部分
 const riseGroup = document.getElementById("water-right-rise");
 if (riseGroup) {
-    // 找到所有面进行变色
     const polys = riseGroup.querySelectorAll("polygon");
     polys.forEach(p => {
         p.setAttribute("fill", "rgba(248, 113, 113, 0.5)"); // 红色半透
@@ -905,30 +1075,27 @@ if (riseGroup) {
     });
 }
 
-// 2. 高亮杯中水 (Cup Water)
+// 2. 高亮杯中水
 const cupWater = document.getElementById("cup-water");
 if (cupWater) {
     const polys = cupWater.querySelectorAll("polygon, path");
     polys.forEach(p => {
-        // 只填充，不一定描边
         if (p.tagName === "polygon" || p.tagName === "path") {
             p.setAttribute("fill", "rgba(248, 113, 113, 0.6)");
         }
     });
 }
+autoAvoidOverlap(svg)
 </script>
 
 <script id="script_step_13">
 // ==========================================
 // Step 13: 标注上升高度 1.5cm
 // ==========================================
-
-// 在右侧容器的右前方棱上标注
-// x = S/2, z = 0 (右前棱)
 drawDimensionLine({
     id: "dim-rise-1.5",
-    p1: { x: S/2, y: H_WATER, z: 0 },
-    p2: { x: S/2, y: S,       z: 0 },
+    p1: { x: S/2, y: H_WATER, z: S },
+    p2: { x: S/2, y: S,       z: S },
     direction: "右",
     text: "1.5cm",
     centerX: CX_RIGHT, centerY: CY,
@@ -936,6 +1103,7 @@ drawDimensionLine({
         textFill: "#dc2626"
     }
 });
+autoAvoidOverlap(svg)
 </script>
 
 <script id="script_step_16">
@@ -943,23 +1111,21 @@ drawDimensionLine({
 // Step 16: 纯文字标注底面积 S=64cm²
 // ==========================================
 
-// 计算左侧容器底面中心投影
-// 深度中心 z = S/2
-const pLeftCenter = Projections.OBLIQUE(0, 0, S/2, { centerX: CX_LEFT, centerY: CY }); 
-
-const textS = document.createElementNS(SVG_NS, "text");
-textS.setAttribute("id", "text-area-S");
-textS.setAttribute("x", pLeftCenter.px);
-textS.setAttribute("y", pLeftCenter.py + 10); // 稍微下移
-textS.setAttribute("text-anchor", "middle");
-textS.setAttribute("fill", "#b45309"); // 棕橙色
-textS.setAttribute("font-size", "16");
-textS.setAttribute("font-weight", "bold");
-textS.setAttribute("stroke", "white"); // 白描边
-textS.setAttribute("stroke-width", "3");
-textS.setAttribute("paint-order", "stroke");
-textS.textContent = "S=64cm²";
-svg.appendChild(textS);
+// 使用 drawTextLabel 替代手动创建 text
+drawTextLabel({
+    id: "text-area-S",
+    text: "S=64cm²",
+    // 3D 坐标：中心点 x=0 (因为容器 x=-S/2, w=S), y=0, z=S/2 (深度中心)
+    x: 0, y: 0, z: S/2,
+    centerX: CX_LEFT, centerY: CY,
+    styles: {
+        textFill: "#b45309", // 棕橙色
+        haloStroke: "white",
+        haloWidth: 3,
+        dy: 10,              // 稍微下移
+        anchor: "middle"
+    }
+});
 
 // 高亮底面 (左侧容器)
 const leftBottom = document.getElementById("container-left-face-bottom");
@@ -967,6 +1133,7 @@ if (leftBottom) {
     leftBottom.setAttribute("fill", "rgba(251, 191, 36, 0.4)"); // 黄色
     leftBottom.setAttribute("stroke", "#f59e0b");
 }
+autoAvoidOverlap(svg)
 </script>
 
 <script id="script_step_18">
@@ -974,25 +1141,23 @@ if (leftBottom) {
 // Step 18: 纯文字标注上升体积 V=96cm³
 // ==========================================
 
-// 计算右侧上升水体的中心位置
+// 使用 drawTextLabel 替代手动创建 text
 const riseMidY = H_WATER + H_RISE/2;
-// 投影点 z=S/2 处于水体内部
-const pRiseCenter = Projections.OBLIQUE(0, riseMidY, S/2, { centerX: CX_RIGHT, centerY: CY });
 
-const textV = document.createElementNS(SVG_NS, "text");
-textV.setAttribute("id", "text-vol-rise");
-textV.setAttribute("x", pRiseCenter.px);
-textV.setAttribute("y", pRiseCenter.py);
-textV.setAttribute("text-anchor", "middle");
-textV.setAttribute("dominant-baseline", "middle");
-textV.setAttribute("fill", "#dc2626"); // 红色
-textV.setAttribute("font-size", "16");
-textV.setAttribute("font-weight", "bold");
-textV.setAttribute("stroke", "white");
-textV.setAttribute("stroke-width", "3");
-textV.setAttribute("paint-order", "stroke");
-textV.textContent = "V=96cm³";
-svg.appendChild(textV);
+drawTextLabel({
+    id: "text-vol-rise",
+    text: "V=96cm³",
+    // 3D 坐标：中心点 x=0, y=中间高度, z=S/2
+    x: 0, y: riseMidY, z: S/2,
+    centerX: CX_RIGHT, centerY: CY,
+    styles: {
+        textFill: "#dc2626", // 红色
+        haloStroke: "white",
+        haloWidth: 3,
+        anchor: "middle"
+    }
+});
+autoAvoidOverlap(svg)
 </script>
 ```
 
@@ -1029,7 +1194,8 @@ svg.appendChild(textV);
 [
     "drawCone",
     "drawDimensionLine",
-    "drawDirectLabel"
+    "drawDirectLabel",
+    "drawTextLabel"
 ]
 ```
 
@@ -1118,6 +1284,7 @@ drawDimensionLine({
     projectFn: (x, y) => ({ px: x, py: y }),
     styles: { textOffset: 10, ext_length: 10 }
 });
+autoAvoidOverlap(svg)
 </script>
 
 <script id="script_step_7">
@@ -1125,7 +1292,7 @@ drawDimensionLine({
 // Step 7: 绘制无箭头旋转圆弧与圆锥体
 // ==========================================
 
-// 1. 旋转圆弧 (Rotation Arc - No Arrow)
+// 1. 旋转圆弧 (Rotation Arc)
 const arrowGroup = document.createElementNS(SVG_NS, "g");
 arrowGroup.setAttribute("id", "rotation-arc-simple");
 
@@ -1135,8 +1302,7 @@ const ay = CY - H_TRI / 2;  // 轴心Y (垂直边中点)
 const rx = 15;              // 半径
 const ry = 6;               // 扁度
 
-// 计算路径点：从左后方出来，绕过前方，到右后方
-// t从 0.85PI 到 2.15PI，顺时针
+// 计算路径点
 const t1 = Math.PI * 0.85; 
 const x1 = ax + rx * Math.cos(t1);
 const y1 = ay + ry * Math.sin(t1);
@@ -1155,7 +1321,6 @@ arcPath.setAttribute("fill", "none");
 arcPath.setAttribute("stroke", "#e11d48");
 arcPath.setAttribute("stroke-width", "2");
 arcPath.setAttribute("stroke-linecap", "round");
-// 移除 marker-end，仅显示红线弧
 arrowGroup.appendChild(arcPath);
 
 svg.appendChild(arrowGroup);
@@ -1178,12 +1343,13 @@ drawCone({
         showCenters: false
     }
 });
+autoAvoidOverlap(svg)
 </script>
 
 <script id="script_step_10">
 // ==========================================
 // Step 10: 确定圆锥的高 (h=4cm)
-// 方式：使用 drawDirectLabel 直接绘制虚线辅助线和文字
+// 使用 drawDirectLabel 绘制内部辅助线
 // ==========================================
 
 drawDirectLabel({
@@ -1204,12 +1370,13 @@ drawDirectLabel({
         textOffset: 12            // 文字稍微偏离轴线
     }
 });
+autoAvoidOverlap(svg)
 </script>
 
 <script id="script_step_11">
 // ==========================================
 // Step 11: 确定圆锥底面半径 (r=3cm)
-// 方式：使用 drawDirectLabel 直接绘制虚线辅助线和文字
+// 使用 drawDirectLabel 绘制内部辅助线
 // ==========================================
 
 drawDirectLabel({
@@ -1230,6 +1397,31 @@ drawDirectLabel({
         textOffset: 15            // 文字向上偏移
     }
 });
+autoAvoidOverlap(svg)
+</script>
+
+<script id="script_step_18">
+// ==========================================
+// Step 18: 标注计算出的体积 (V=37.68cm³)
+// 使用 drawTextLabel 进行纯文字标注
+// ==========================================
+
+drawTextLabel({
+    id: "label-cone-vol",
+    text: "V=37.68cm³",
+    x: 0, y: -20, z: 0, // 放置在圆锥底面下方
+    centerX: CX_RIGHT, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        textFill: "#b45309", // 深橙色
+        fontSize: 18,
+        haloStroke: "white",
+        haloWidth: 4,
+        dy: 40, // 进一步向下偏移，避免与底面重叠
+        anchor: "middle"
+    }
+});
+autoAvoidOverlap(svg)
 </script>
 ```
 

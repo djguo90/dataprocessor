@@ -100,8 +100,7 @@
         };
 
         // =====================
-        // 2) 标注/箭头统一默认样式（建议）
-        //   适用于 drawArrow / drawDimensionLabel / drawCurlyBraceLabel / drawDirectLabel
+        // 2) 标注/箭头统一默认样式 (已修改：去除 textBackground 和 gap)
         // =====================
         const DEFAULT_ANNOTATION_STYLES = {
             // --- 线条/箭头通用 ---
@@ -110,40 +109,33 @@
             opacity: 1,
             linecap: "round",
             linejoin: "round",
-            dashArray: null,           // null 表示实线；如 "4,4"
+            dashArray: null,
 
-            fill: "#333",              // 箭头/实体符号填充色
+            fill: "#333",
 
             // --- 文字通用 ---
             fontSize: 14,
             fontFamily: "Arial, sans-serif",
             textFill: "#333",
 
-            // 文字光晕（你现在是白描边 halo）
+            // 文字光晕 (Halo)
             haloStroke: "white",
             haloWidth: 3,
             haloLinejoin: "round",
 
-            // 可选：强背景（比 halo 更“遮挡线条”）
-            textBackground: false,
-            textBgFill: "white",
-            textBgOpacity: 1,
-            textBgPadding: 3,          // 背景 padding（需要你在代码里用 <rect> 实现）
-
-            // --- 箭头参数（arrow/dim/direct 都可能用到） ---
+            // --- 箭头参数 ---
             arrowSize: 8,
             arrowWidth: 3,
 
-            // --- 尺寸标注特有（drawDimensionLabel） ---
+            // --- 尺寸标注特有 ---
             textOffset: 8,
-            gap: 3,
-            ext_length: 8,
+            ext_length: 8, // 仅保留延伸线长度
 
-            // --- 花括号特有（drawCurlyBraceLabel） ---
+            // --- 花括号特有 ---
             braceDepth: 10,
             braceGap: 15,
 
-            // --- 原地/辅助线标注特有（drawDirectLabel） ---
+            // --- 原地/辅助线标注特有 ---
             directDashArray: "4,4",
             directArrowStart: true,
             directArrowEnd: true
@@ -176,265 +168,196 @@
         };
         
         /**
-         * 全局函数：自动调整带有 .smart-label 类的文本位置，使其不遮挡几何图形。
-         * 
-         * 原理：
-         * 1. 找到所有几何图形（path, line, polygon, rect）。
-         * 2. 遍历所有智能标签。
-         * 3. 检测标签与几何图形是否重叠。
-         * 4. 如果重叠，分别模拟“法向”、“切向+”、“切向-”三个方向，谁先找到空位且移动距离最短，就选谁。
-         * 5. 重复尝试，直到不重叠或达到最大尝试次数。
-         * 
-         * @param {SVGElement} svgRoot - 根 SVG 元素
+         * 全局函数：自动防重叠 (已修改：移除背景框同步逻辑)
          */
-        function autoAvoidOverlap(svgRoot, opts = {}) {
-        if (!svgRoot) svgRoot = window.mainSvg;
-        if (!svgRoot) return;
+         function autoAvoidOverlap(svgRoot, opts = {}) {
+            if (!svgRoot) svgRoot = window.mainSvg;
+            if (!svgRoot) return;
 
-        // ===== 可调参数（你也可以在调用时覆盖）=====
-        const MAX_STEPS = opts.MAX_STEPS ?? 28;              // 每个方向最多尝试步数
-        const STEP_SIZE = opts.STEP_SIZE ?? 4;               // 每步距离(px)
-        const PADDING   = opts.PADDING   ?? 2;               // 碰撞缓冲(px)
-        const PASSES    = opts.PASSES    ?? 2;               // 多轮迭代，提升多标签稳定性
+            const MAX_STEPS = opts.MAX_STEPS ?? 28;
+            const STEP_SIZE = opts.STEP_SIZE ?? 4;
+            const PADDING   = opts.PADDING   ?? 2;
+            const PASSES    = opts.PASSES    ?? 2;
+            const TANGENT_MAX_DIST = opts.TANGENT_MAX_DIST ?? 120;
+            const NORMAL_SOFT_LIMIT = opts.NORMAL_SOFT_LIMIT ?? 28;
+            const NORMAL_OVER_PENALTY = opts.NORMAL_OVER_PENALTY ?? 1.6;
 
-        // 切向最大搜索距离：关键！默认给大一些，避免 dataset.limit 太小导致“上下走不通”
-        const TANGENT_MAX_DIST = opts.TANGENT_MAX_DIST ?? 120;
+            const PENALTY_NORMAL      = opts.PENALTY_NORMAL      ?? 1.0;
+            const PENALTY_TANGENT     = opts.PENALTY_TANGENT     ?? 0.95;
+            const PENALTY_NORMAL_OPP  = opts.PENALTY_NORMAL_OPP  ?? 1.15;
+            const PENALTY_DIAG        = opts.PENALTY_DIAG        ?? 1.05;
 
-        // 法向软上限：超过这个距离仍可走，但会被额外惩罚，避免“往右跑飞”
-        const NORMAL_SOFT_LIMIT = opts.NORMAL_SOFT_LIMIT ?? 28;   // px
-        const NORMAL_OVER_PENALTY = opts.NORMAL_OVER_PENALTY ?? 1.6; // 越大越不愿意跑远
+            const obstacles = Array.from(
+                svgRoot.querySelectorAll("path, polygon, line, rect, circle, ellipse, text:not(.smart-label)")
+            );
+            const labels = Array.from(svgRoot.querySelectorAll("text.smart-label"));
+            if (!labels.length) return;
 
-        // 各方向基础惩罚系数（越小越优先）
-        const PENALTY_NORMAL      = opts.PENALTY_NORMAL      ?? 1.0;
-        const PENALTY_TANGENT     = opts.PENALTY_TANGENT     ?? 0.95;  // 让“上下”略优先一点
-        const PENALTY_NORMAL_OPP  = opts.PENALTY_NORMAL_OPP  ?? 1.15;
-        const PENALTY_DIAG        = opts.PENALTY_DIAG        ?? 1.05;
-
-        // ===== 1) 障碍物：几何 + 非 smart-label 的 text（比如 S=50cm²）=====
-        const obstacles = Array.from(
-            svgRoot.querySelectorAll("path, polygon, line, rect, circle, ellipse, text:not(.smart-label)")
-        );
-        const labels = Array.from(svgRoot.querySelectorAll("text.smart-label"));
-        if (!labels.length) return;
-
-        const isVisibleEl = (el) => {
-            const style = window.getComputedStyle(el);
-            if (!style) return true;
-            if (style.display === "none" || style.visibility === "hidden") return false;
-            if (parseFloat(style.opacity || "1") <= 0) return false;
-            return true;
-        };
-
-        const rectsOverlap = (a, b) => !(
-            a.x > b.x + b.width ||
-            a.x + a.width < b.x ||
-            a.y > b.y + b.height ||
-            a.y + a.height < b.y
-        );
-
-        const getInflatedBBox = (el, pad) => {
-            const bb = el.getBBox();
-            let sw = 0;
-            const swAttr = el.getAttribute("stroke-width");
-            if (swAttr != null) sw = parseFloat(swAttr) || 0;
-            const inflate = pad + sw * 0.5;
-            return {
-            x: bb.x - inflate,
-            y: bb.y - inflate,
-            width: bb.width + inflate * 2,
-            height: bb.height + inflate * 2
+            const isVisibleEl = (el) => {
+                const style = window.getComputedStyle(el);
+                if (!style) return true;
+                if (style.display === "none" || style.visibility === "hidden") return false;
+                if (parseFloat(style.opacity || "1") <= 0) return false;
+                return true;
             };
-        };
 
-        // ===== 2) 关键修复：按 text-anchor / dominant-baseline 算虚拟 Rect =====
-        const makeTextRectCalculator = (textEl, w, h) => {
-            const anchor = (textEl.getAttribute("text-anchor") || "middle").trim();
-            const baseline = (textEl.getAttribute("dominant-baseline") || "middle").trim();
-
-            // halo 也算进碰撞（文字描边）
-            const haloW = parseFloat(textEl.getAttribute("stroke-width") || "0") || 0;
-            const inflate = PADDING + haloW * 0.5;
-
-            return (x, y) => {
-            let rx;
-            if (anchor === "start") rx = x;
-            else if (anchor === "end") rx = x - w;
-            else rx = x - w / 2;
-
-            let ry;
-            if (baseline === "middle" || baseline === "central") ry = y - h / 2;
-            else if (baseline === "hanging" || baseline === "text-before-edge") ry = y;
-            else if (baseline === "text-after-edge") ry = y - h;
-            else ry = y - h / 2;
-
-            return {
-                x: rx - inflate,
-                y: ry - inflate,
-                width: w + inflate * 2,
-                height: h + inflate * 2
-            };
-            };
-        };
-
-        const checkCollision = (vrect, ignoreGroup, placedLabelRects) => {
-            // 几何/文字障碍物
-            for (const shape of obstacles) {
-            if (!isVisibleEl(shape)) continue;
-            if (ignoreGroup && ignoreGroup.contains(shape)) continue;
-            const r = getInflatedBBox(shape, PADDING);
-            if (rectsOverlap(vrect, r)) return true;
-            }
-            // 已安置标签（实现标签互避）
-            for (const item of placedLabelRects) {
-            if (ignoreGroup && item.group && ignoreGroup === item.group) continue;
-            if (rectsOverlap(vrect, item.rect)) return true;
-            }
-            return false;
-        };
-
-        const norm2 = (x, y) => {
-            const L = Math.hypot(x, y);
-            if (L < 1e-9) return { x: 0, y: 0 };
-            return { x: x / L, y: y / L };
-        };
-
-        // ===== 3) 多轮迭代处理多标签 =====
-        for (let pass = 0; pass < PASSES; pass++) {
-            let movedAny = false;
-            const placed = []; // 本轮已放置标签的 rect，后续标签要避开它们
-
-            for (const textEl of labels) {
-            if (!isVisibleEl(textEl)) continue;
-
-            // 来自 drawDimensionLabel 的向量信息
-            const nx0 = parseFloat(textEl.dataset.nx || "0");
-            const ny0 = parseFloat(textEl.dataset.ny || "1");
-            const ux0 = parseFloat(textEl.dataset.ux || "1");
-            const uy0 = parseFloat(textEl.dataset.uy || "0");
-
-            const ox = parseFloat(textEl.dataset.ox || textEl.getAttribute("x") || "0");
-            const oy = parseFloat(textEl.dataset.oy || textEl.getAttribute("y") || "0");
-
-            // 你原先的 limit 很小，这里把它当“建议值”，实际最大用 TANGENT_MAX_DIST
-            const rawLimit = parseFloat(textEl.dataset.limit);
-            const tangentMaxDist = Math.max(
-                isFinite(rawLimit) ? rawLimit : 0,
-                TANGENT_MAX_DIST
+            const rectsOverlap = (a, b) => !(
+                a.x > b.x + b.width ||
+                a.x + a.width < b.x ||
+                a.y > b.y + b.height ||
+                a.y + a.height < b.y
             );
 
-            const parentId = textEl.dataset.parentId;
-            const myGroup = parentId ? document.getElementById(parentId) : (textEl.closest("g") || null);
-
-            // 先恢复原点测尺寸
-            textEl.setAttribute("x", ox);
-            textEl.setAttribute("y", oy);
-            const baseBox = textEl.getBBox();
-            const w = baseBox.width;
-            const h = baseBox.height;
-
-            const calcRect = makeTextRectCalculator(textEl, w, h);
-
-            // 起点如果不撞，仍然要加入 placed（避免其他标签盖上来）
-            const startRect = calcRect(ox, oy);
-
-            const N  = norm2(nx0, ny0);
-            const U  = norm2(ux0, uy0);
-
-            // 候选方向：法向±、切向±、斜向（法+切 的组合）
-            const dirs = [
-                { name: "normal",     vx: N.x,        vy: N.y,        maxDist: null,          basePenalty: PENALTY_NORMAL },
-                { name: "tangent+",   vx: U.x,        vy: U.y,        maxDist: tangentMaxDist, basePenalty: PENALTY_TANGENT },
-                { name: "tangent-",   vx: -U.x,       vy: -U.y,       maxDist: tangentMaxDist, basePenalty: PENALTY_TANGENT },
-                { name: "normalOpp",  vx: -N.x,       vy: -N.y,       maxDist: null,          basePenalty: PENALTY_NORMAL_OPP },
-
-                // 斜向：更容易找到“近的空位”
-                (() => { const v = norm2(N.x + U.x, N.y + U.y); return { name:"diag1", vx:v.x, vy:v.y, maxDist: 120, basePenalty: PENALTY_DIAG }; })(),
-                (() => { const v = norm2(N.x - U.x, N.y - U.y); return { name:"diag2", vx:v.x, vy:v.y, maxDist: 120, basePenalty: PENALTY_DIAG }; })(),
-                (() => { const v = norm2(-N.x + U.x, -N.y + U.y); return { name:"diag3", vx:v.x, vy:v.y, maxDist: 120, basePenalty: PENALTY_DIAG }; })(),
-                (() => { const v = norm2(-N.x - U.x, -N.y - U.y); return { name:"diag4", vx:v.x, vy:v.y, maxDist: 120, basePenalty: PENALTY_DIAG }; })(),
-            ].filter(d => Math.hypot(d.vx, d.vy) > 1e-6);
-
-            const findBestInDir = (dir) => {
-                let best = null;
-
-                for (let i = 0; i <= MAX_STEPS; i++) {
-                const dist = i * STEP_SIZE;
-                if (dir.maxDist != null && dist > dir.maxDist) break;
-
-                const x = ox + dir.vx * dist;
-                const y = oy + dir.vy * dist;
-                const vrect = calcRect(x, y);
-
-                if (checkCollision(vrect, myGroup, placed)) continue;
-
-                // 代价：基础距离 * 惩罚
-                // 对“normal”加入跑远惩罚，避免向右走太多
-                let cost = dist * dir.basePenalty;
-
-                if (dir.name === "normal" && dist > NORMAL_SOFT_LIMIT) {
-                    cost += (dist - NORMAL_SOFT_LIMIT) * NORMAL_OVER_PENALTY;
-                }
-
-                // 找到就先记录，但继续看看同方向有没有更低 cost（通常 i 越小越好）
-                if (!best || cost < best.cost) {
-                    best = { x, y, rect: vrect, steps: i, cost, name: dir.name };
-                }
-
-                // 同方向 i 越大通常越差，这里可直接 break 加速
-                // 但为了稳一点（考虑 normal 跑远惩罚），我们不 break，让它有机会在同方向选更合理的点
-                }
-
-                return best;
+            const getInflatedBBox = (el, pad) => {
+                const bb = el.getBBox();
+                let sw = 0;
+                const swAttr = el.getAttribute("stroke-width");
+                if (swAttr != null) sw = parseFloat(swAttr) || 0;
+                const inflate = pad + sw * 0.5;
+                return {
+                    x: bb.x - inflate,
+                    y: bb.y - inflate,
+                    width: bb.width + inflate * 2,
+                    height: bb.height + inflate * 2
+                };
             };
 
-            // 如果起点不撞：仍可能需要微调以避开“标签-标签”，所以也纳入候选
-            let bestOverall = null;
-            if (!checkCollision(startRect, myGroup, placed)) {
-                bestOverall = { x: ox, y: oy, rect: startRect, steps: 0, cost: 0, name: "stay" };
+            const makeTextRectCalculator = (textEl, w, h) => {
+                const anchor = (textEl.getAttribute("text-anchor") || "middle").trim();
+                const baseline = (textEl.getAttribute("dominant-baseline") || "middle").trim();
+                const haloW = parseFloat(textEl.getAttribute("stroke-width") || "0") || 0;
+                const inflate = PADDING + haloW * 0.5;
+
+                return (x, y) => {
+                    let rx;
+                    if (anchor === "start") rx = x;
+                    else if (anchor === "end") rx = x - w;
+                    else rx = x - w / 2;
+
+                    let ry;
+                    if (baseline === "middle" || baseline === "central") ry = y - h / 2;
+                    else if (baseline === "hanging" || baseline === "text-before-edge") ry = y;
+                    else if (baseline === "text-after-edge") ry = y - h;
+                    else ry = y - h / 2;
+
+                    return {
+                        x: rx - inflate,
+                        y: ry - inflate,
+                        width: w + inflate * 2,
+                        height: h + inflate * 2
+                    };
+                };
+            };
+
+            const checkCollision = (vrect, ignoreGroup, placedLabelRects) => {
+                for (const shape of obstacles) {
+                    if (!isVisibleEl(shape)) continue;
+                    if (ignoreGroup && ignoreGroup.contains(shape)) continue;
+                    const r = getInflatedBBox(shape, PADDING);
+                    if (rectsOverlap(vrect, r)) return true;
+                }
+                for (const item of placedLabelRects) {
+                    if (ignoreGroup && item.group && ignoreGroup === item.group) continue;
+                    if (rectsOverlap(vrect, item.rect)) return true;
+                }
+                return false;
+            };
+
+            const norm2 = (x, y) => {
+                const L = Math.hypot(x, y);
+                if (L < 1e-9) return { x: 0, y: 0 };
+                return { x: x / L, y: y / L };
+            };
+
+            for (let pass = 0; pass < PASSES; pass++) {
+                let movedAny = false;
+                const placed = [];
+
+                for (const textEl of labels) {
+                    if (!isVisibleEl(textEl)) continue;
+
+                    const nx0 = parseFloat(textEl.dataset.nx || "0");
+                    const ny0 = parseFloat(textEl.dataset.ny || "1");
+                    const ux0 = parseFloat(textEl.dataset.ux || "1");
+                    const uy0 = parseFloat(textEl.dataset.uy || "0");
+                    const ox = parseFloat(textEl.dataset.ox || textEl.getAttribute("x") || "0");
+                    const oy = parseFloat(textEl.dataset.oy || textEl.getAttribute("y") || "0");
+                    const rawLimit = parseFloat(textEl.dataset.limit);
+                    const tangentMaxDist = Math.max(isFinite(rawLimit) ? rawLimit : 0, TANGENT_MAX_DIST);
+
+                    const parentId = textEl.dataset.parentId;
+                    const myGroup = parentId ? document.getElementById(parentId) : (textEl.closest("g") || null);
+
+                    textEl.setAttribute("x", ox);
+                    textEl.setAttribute("y", oy);
+                    const baseBox = textEl.getBBox();
+                    const w = baseBox.width;
+                    const h = baseBox.height;
+
+                    const calcRect = makeTextRectCalculator(textEl, w, h);
+                    const startRect = calcRect(ox, oy);
+                    const N  = norm2(nx0, ny0);
+                    const U  = norm2(ux0, uy0);
+
+                    const dirs = [
+                        { name: "normal",     vx: N.x,        vy: N.y,        maxDist: null,          basePenalty: PENALTY_NORMAL },
+                        { name: "tangent+",   vx: U.x,        vy: U.y,        maxDist: tangentMaxDist, basePenalty: PENALTY_TANGENT },
+                        { name: "tangent-",   vx: -U.x,       vy: -U.y,       maxDist: tangentMaxDist, basePenalty: PENALTY_TANGENT },
+                        { name: "normalOpp",  vx: -N.x,       vy: -N.y,       maxDist: null,          basePenalty: PENALTY_NORMAL_OPP },
+                        { name: "diag1",      vx: norm2(N.x+U.x, N.y+U.y).x, vy: norm2(N.x+U.x, N.y+U.y).y, maxDist: 120, basePenalty: PENALTY_DIAG },
+                        { name: "diag2",      vx: norm2(N.x-U.x, N.y-U.y).x, vy: norm2(N.x-U.x, N.y-U.y).y, maxDist: 120, basePenalty: PENALTY_DIAG },
+                        { name: "diag3",      vx: norm2(-N.x+U.x, -N.y+U.y).x, vy: norm2(-N.x+U.x, -N.y+U.y).y, maxDist: 120, basePenalty: PENALTY_DIAG },
+                        { name: "diag4",      vx: norm2(-N.x-U.x, -N.y-U.y).x, vy: norm2(-N.x-U.x, -N.y-U.y).y, maxDist: 120, basePenalty: PENALTY_DIAG },
+                    ].filter(d => Math.hypot(d.vx, d.vy) > 1e-6);
+
+                    const findBestInDir = (dir) => {
+                        let best = null;
+                        for (let i = 0; i <= MAX_STEPS; i++) {
+                            const dist = i * STEP_SIZE;
+                            if (dir.maxDist != null && dist > dir.maxDist) break;
+                            const x = ox + dir.vx * dist;
+                            const y = oy + dir.vy * dist;
+                            const vrect = calcRect(x, y);
+                            if (checkCollision(vrect, myGroup, placed)) continue;
+                            let cost = dist * dir.basePenalty;
+                            if (dir.name === "normal" && dist > NORMAL_SOFT_LIMIT) {
+                                cost += (dist - NORMAL_SOFT_LIMIT) * NORMAL_OVER_PENALTY;
+                            }
+                            if (!best || cost < best.cost) {
+                                best = { x, y, rect: vrect, steps: i, cost, name: dir.name };
+                            }
+                        }
+                        return best;
+                    };
+
+                    let bestOverall = null;
+                    if (!checkCollision(startRect, myGroup, placed)) {
+                        bestOverall = { x: ox, y: oy, rect: startRect, steps: 0, cost: 0, name: "stay" };
+                    }
+
+                    for (const dir of dirs) {
+                        const cand = findBestInDir(dir);
+                        if (!cand) continue;
+                        if (!bestOverall || cand.cost < bestOverall.cost) bestOverall = cand;
+                    }
+
+                    if (!bestOverall) {
+                        placed.push({ group: myGroup, rect: startRect, el: textEl });
+                        continue;
+                    }
+
+                    if (bestOverall.steps > 0) movedAny = true;
+                    textEl.setAttribute("x", bestOverall.x);
+                    textEl.setAttribute("y", bestOverall.y);
+
+                    // --- 已移除背景框同步逻辑 ---
+
+                    const finalRect = calcRect(bestOverall.x, bestOverall.y);
+                    placed.push({ group: myGroup, rect: finalRect, el: textEl });
+                }
+                if (!movedAny) break;
             }
-
-            for (const dir of dirs) {
-                const cand = findBestInDir(dir);
-                if (!cand) continue;
-                if (!bestOverall || cand.cost < bestOverall.cost) bestOverall = cand;
-            }
-
-            if (!bestOverall) {
-                // 全都堵死：保持原位并落位
-                placed.push({ group: myGroup, rect: startRect, el: textEl });
-                continue;
-            }
-
-            // 应用最佳位置
-            if (bestOverall.steps > 0) movedAny = true;
-
-            textEl.setAttribute("x", bestOverall.x);
-            textEl.setAttribute("y", bestOverall.y);
-
-            // 背景框同步（避免你之前 s 未定义）
-            const bgEl =
-                (parentId && document.getElementById(`${parentId}-text-bg`)) ||
-                document.getElementById(`${textEl.id}-bg`) ||
-                document.getElementById(`${textEl.id}-text-bg`);
-
-            if (bgEl && bgEl.tagName.toLowerCase() === "rect") {
-                const bb = textEl.getBBox();
-                const pad = 3;
-                bgEl.setAttribute("x", bb.x - pad);
-                bgEl.setAttribute("y", bb.y - pad);
-                bgEl.setAttribute("width", bb.width + pad * 2);
-                bgEl.setAttribute("height", bb.height + pad * 2);
-            }
-
-            // 记录最终 rect，供后续标签避让
-            const finalRect = calcRect(bestOverall.x, bestOverall.y);
-            placed.push({ group: myGroup, rect: finalRect, el: textEl });
-            }
-
-            if (!movedAny) break;
         }
-        }
-        
         /**
          * 绘制长方体 (支持自定义投影策略)
          *
@@ -1373,38 +1296,30 @@
          * @param {function} [config.projectFn] - 投影函数 (默认 Projections.OBLIQUE)
          * @param {object} [config.styles] - 样式覆盖 { gap, ext_length, arrowSize, ... }
          */
-         function drawDimensionLine(config) {
+        function drawDimensionLine(config) {
             const {
-                id,
-                p1,
-                p2,
-                direction,
-                text,
+                id, p1, p2, direction, text,
                 projectFn = Projections.OBLIQUE,
                 styles = {}
             } = config;
 
             const s = { ...DEFAULT_ANNOTATION_STYLES, ...styles };
-
             const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
             if (!svgTarget) throw new Error("drawDimensionLine: global svg not found.");
 
-            // 1) 投影
             const pt1 = projectFn(p1.x, p1.y, p1.z, config);
             const pt2 = projectFn(p2.x, p2.y, p2.z, config);
 
-            // 2) 向量计算
             const dx = pt2.px - pt1.px;
             const dy = pt2.py - pt1.py;
             const len = Math.sqrt(dx * dx + dy * dy);
             if (len < 0.001) return null;
 
-            const ux = dx / len; // 单位方向向量
+            const ux = dx / len;
             const uy = dy / len;
-            const baseNx = -uy;  // 法向量
+            const baseNx = -uy;
             const baseNy = ux;
 
-            // 3) 方向判定
             const dirVectors = {
                 "上": { x: 0,  y: -1 },
                 "下": { x: 0,  y:  1 },
@@ -1418,28 +1333,19 @@
             const nx = baseNx * dirSign;
             const ny = baseNy * dirSign;
 
-            // 4) 几何点计算
-            // extLen 为延伸线总长度
+            // 延伸线长度
             const extLen = s.ext_length ?? 25; 
-            // 尺寸线位置：设在延伸线的 80% 处，留出 20% 的出头（符合制图标准）
             const dimPos = extLen * 0.8; 
 
-            const dimP1 = {
-                x: pt1.px + nx * dimPos,
-                y: pt1.py + ny * dimPos
-            };
-            const dimP2 = {
-                x: pt2.px + nx * dimPos,
-                y: pt2.py + ny * dimPos
-            };
+            // 几何点计算 (已移除 gap，直接从 pt1/pt2 开始)
+            const dimP1 = { x: pt1.px + nx * dimPos, y: pt1.py + ny * dimPos };
+            const dimP2 = { x: pt2.px + nx * dimPos, y: pt2.py + ny * dimPos };
 
-            // 延伸线起点紧贴 pt1, pt2
             const ext1_Start = { x: pt1.px, y: pt1.py };
             const ext1_End   = { x: pt1.px + nx * extLen, y: pt1.py + ny * extLen };
             const ext2_Start = { x: pt2.px, y: pt2.py };
             const ext2_End   = { x: pt2.px + nx * extLen, y: pt2.py + ny * extLen };
 
-            // 5) 创建组
             const g = document.createElementNS(SVG_NS, "g");
             g.setAttribute("id", id);
             g.setAttribute("class", "annotation-group");
@@ -1453,58 +1359,43 @@
                 if (s.dashArray) el.setAttribute("stroke-dasharray", s.dashArray);
             };
 
-            // 6) 绘制延伸线 (Extension Lines)
+            // 延伸线
             const elExt = document.createElementNS(SVG_NS, "path");
             elExt.setAttribute("id", `${id}-ext`);
-            elExt.setAttribute(
-                "d",
-                `M ${ext1_Start.x},${ext1_Start.y} L ${ext1_End.x},${ext1_End.y} ` +
-                `M ${ext2_Start.x},${ext2_Start.y} L ${ext2_End.x},${ext2_End.y}`
-            );
+            elExt.setAttribute("d", `M ${ext1_Start.x},${ext1_Start.y} L ${ext1_End.x},${ext1_End.y} M ${ext2_Start.x},${ext2_Start.y} L ${ext2_End.x},${ext2_End.y}`);
             elExt.setAttribute("fill", "none");
             applyStroke(elExt);
             g.appendChild(elExt);
 
-            // 7) 绘制主尺寸线 (Dimension Line)
+            // 主尺寸线
             const elDim = document.createElementNS(SVG_NS, "line");
             elDim.setAttribute("id", `${id}-dim`);
-            elDim.setAttribute("x1", dimP1.x);
-            elDim.setAttribute("y1", dimP1.y);
-            elDim.setAttribute("x2", dimP2.x);
-            elDim.setAttribute("y2", dimP2.y);
+            elDim.setAttribute("x1", dimP1.x); elDim.setAttribute("y1", dimP1.y);
+            elDim.setAttribute("x2", dimP2.x); elDim.setAttribute("y2", dimP2.y);
             applyStroke(elDim);
             g.appendChild(elDim);
 
-            // 8) 绘制双箭头
+            // 箭头
             const arrowSize = s.arrowSize ?? 8;
             const arrowWidth = s.arrowWidth ?? 3;
-
-            const a1Tip = dimP1;
             const a1Base = { x: dimP1.x + ux * arrowSize, y: dimP1.y + uy * arrowSize };
             const a1Left = { x: a1Base.x + nx * arrowWidth, y: a1Base.y + ny * arrowWidth };
             const a1Right= { x: a1Base.x - nx * arrowWidth, y: a1Base.y - ny * arrowWidth };
-
-            const a2Tip = dimP2;
             const a2Base = { x: dimP2.x - ux * arrowSize, y: dimP2.y - uy * arrowSize };
             const a2Left = { x: a2Base.x + nx * arrowWidth, y: a2Base.y + ny * arrowWidth };
             const a2Right= { x: a2Base.x - nx * arrowWidth, y: a2Base.y - ny * arrowWidth };
 
             const elArrows = document.createElementNS(SVG_NS, "path");
             elArrows.setAttribute("id", `${id}-arrows`);
-            elArrows.setAttribute(
-                "d",
-                `M ${a1Tip.x},${a1Tip.y} L ${a1Left.x},${a1Left.y} L ${a1Right.x},${a1Right.y} Z ` +
-                `M ${a2Tip.x},${a2Tip.y} L ${a2Left.x},${a2Left.y} L ${a2Right.x},${a2Right.y} Z`
-            );
+            elArrows.setAttribute("d", `M ${dimP1.x},${dimP1.y} L ${a1Left.x},${a1Left.y} L ${a1Right.x},${a1Right.y} Z M ${dimP2.x},${dimP2.y} L ${a2Left.x},${a2Left.y} L ${a2Right.x},${a2Right.y} Z`);
             elArrows.setAttribute("fill", s.fill);
             if (s.opacity != null) elArrows.setAttribute("fill-opacity", s.opacity);
             g.appendChild(elArrows);
 
-            // 9) 绘制文本
+            // 文本
             const midX = (dimP1.x + dimP2.x) / 2;
             const midY = (dimP1.y + dimP2.y) / 2;
             const textOffset = s.textOffset ?? 10;
-
             const textX = midX + nx * textOffset;
             const textY = midY + ny * textOffset;
 
@@ -1521,16 +1412,13 @@
             elText.setAttribute("font-size", s.fontSize);
             elText.setAttribute("font-family", s.fontFamily);
             elText.setAttribute("fill", s.textFill ?? s.fill);
-
-            // Halo 效果
-            elText.setAttribute("stroke", s.haloStroke || "white");
-            elText.setAttribute("stroke-width", s.haloWidth || 3);
+            elText.setAttribute("stroke", s.haloStroke);
+            elText.setAttribute("stroke-width", s.haloWidth);
             elText.setAttribute("paint-order", "stroke");
             elText.setAttribute("stroke-linejoin", "round");
-
             elText.textContent = text;
 
-            // 智能避让相关元数据
+            // 注入智能避让数据
             elText.classList.add("smart-label");
             elText.dataset.nx = nx;
             elText.dataset.ny = ny;
@@ -1542,30 +1430,11 @@
             elText.dataset.parentId = id;
 
             g.appendChild(elText);
-
-            // 挂载到画布
             svgTarget.appendChild(g);
 
-            // 可选背景矩形
-            if (s.textBackground) {
-                const bb = elText.getBBox();
-                const pad = s.textBgPadding ?? 3;
-                const bg = document.createElementNS(SVG_NS, "rect");
-                bg.setAttribute("id", `${id}-text-bg`);
-                bg.setAttribute("x", bb.x - pad);
-                bg.setAttribute("y", bb.y - pad);
-                bg.setAttribute("width", bb.width + pad * 2);
-                bg.setAttribute("height", bb.height + pad * 2);
-                bg.setAttribute("rx", 2);
-                bg.setAttribute("ry", 2);
-                bg.setAttribute("fill", s.textBgFill ?? "white");
-                bg.setAttribute("fill-opacity", s.textBgOpacity ?? 1);
-                g.insertBefore(bg, elText);
-            }
-
+            // 已移除 textBackground 逻辑
             return g;
-        }
-        /**
+        }/**
          * [Type 2] 绘制花括号标记
          * 适用场景：汇总多段尺寸、总览标注
          */
@@ -1724,21 +1593,18 @@
             return g;
         }
         /**
-         * [Type 3] 绘制原地/辅助线标记
+         * [Type 3] 绘制原地/辅助线标记 (修改版：永远水平)
          * 适用场景：半径(R)、直径(Φ)、内部高、辅助虚线
+         * 特性：文字不旋转，而是根据线条法向偏移，保持水平阅读。
          */
          function drawDirectLabel(config) {
             const {
-                id,
-                p1,
-                p2,
-                text,
+                id, p1, p2, text,
                 projectFn = Projections.OBLIQUE,
                 styles = {}
             } = config;
 
             const s = { ...DEFAULT_ANNOTATION_STYLES, ...styles };
-
             const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
             if (!svgTarget) throw new Error("drawDirectLabel: global svg not found.");
 
@@ -1752,95 +1618,151 @@
 
             const ux = dx / len;
             const uy = dy / len;
-
-            // 法向（用于文字偏移，确保文字不压在线上）
             const nx = -uy;
             const ny = ux;
 
             const g = document.createElementNS(SVG_NS, "g");
             g.setAttribute("id", id);
 
-            // 1) 连接线
             const line = document.createElementNS(SVG_NS, "line");
             line.setAttribute("id", `${id}-line`);
-            line.setAttribute("x1", pt1.px);
-            line.setAttribute("y1", pt1.py);
-            line.setAttribute("x2", pt2.px);
-            line.setAttribute("y2", pt2.py);
+            line.setAttribute("x1", pt1.px); line.setAttribute("y1", pt1.py);
+            line.setAttribute("x2", pt2.px); line.setAttribute("y2", pt2.py);
             line.setAttribute("stroke", s.stroke);
             line.setAttribute("stroke-width", s.strokeWidth);
             if (s.opacity != null) line.setAttribute("stroke-opacity", s.opacity);
             if (s.linecap) line.setAttribute("stroke-linecap", s.linecap);
             if (s.linejoin) line.setAttribute("stroke-linejoin", s.linejoin);
-
             const dash = (s.directDashArray != null) ? s.directDashArray : s.dashArray;
             if (dash) line.setAttribute("stroke-dasharray", dash);
-
             g.appendChild(line);
 
-            // 2) 文本容器（用于整体偏移和旋转）
             const midX = (pt1.px + pt2.px) / 2;
             const midY = (pt1.py + pt2.py) / 2;
-            
-            // 计算偏移量：根据字号自动计算一个合适的间距，或者从 styles 中读取
-            const offsetDist = s.textOffset ?? (parseInt(s.fontSize) * 0.8 || 10); 
-            
-            // 计算旋转角度
-            let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            // 确保文字永远是正向的（不倒立）
-            if (angle > 90 || angle < -90) {
-                angle += 180;
-            }
+            const textOffset = s.textOffset ?? 10;
+            const textX = midX + nx * textOffset;
+            const textY = midY + ny * textOffset;
 
-            // 创建一个子组来放置文字及其背景，方便统一变换
-            const textGroup = document.createElementNS(SVG_NS, "g");
-            // 将文字平移到中点，再沿法线偏移，最后旋转
-            const tx = midX + nx * offsetDist;
-            const ty = midY + ny * offsetDist;
-            textGroup.setAttribute("transform", `translate(${tx}, ${ty}) rotate(${angle})`);
+            let anchor = "middle";
+            if (nx > 0.3) anchor = "start";
+            else if (nx < -0.3) anchor = "end";
 
             const elText = document.createElementNS(SVG_NS, "text");
             elText.setAttribute("id", `${id}-text`);
-            // 此时坐标设为 0,0，因为变换已经在 group 上处理了
-            elText.setAttribute("x", 0);
-            elText.setAttribute("y", 0);
-            elText.setAttribute("text-anchor", "middle");
+            elText.setAttribute("x", textX);
+            elText.setAttribute("y", textY);
+            elText.setAttribute("text-anchor", anchor);
             elText.setAttribute("dominant-baseline", "middle");
             elText.setAttribute("font-size", s.fontSize);
             elText.setAttribute("font-family", s.fontFamily);
             elText.setAttribute("fill", s.textFill ?? s.fill);
-
-            // Halo 效果
-            elText.setAttribute("stroke", s.haloStroke || "none");
-            elText.setAttribute("stroke-width", Math.max(s.haloWidth ?? 3, 4));
+            elText.setAttribute("stroke", s.haloStroke || "white");
+            elText.setAttribute("stroke-width", s.haloWidth || 3);
             elText.setAttribute("paint-order", "stroke");
             elText.setAttribute("stroke-linejoin", s.haloLinejoin || "round");
-
             elText.textContent = text;
-            textGroup.appendChild(elText);
-            g.appendChild(textGroup);
 
+            // 注入智能避让数据
+            elText.classList.add("smart-label");
+            elText.dataset.nx = nx;
+            elText.dataset.ny = ny;
+            elText.dataset.ux = ux;
+            elText.dataset.uy = uy;
+            elText.dataset.ox = textX;
+            elText.dataset.oy = textY;
+            elText.dataset.limit = (len / 2) - 5; 
+            elText.dataset.parentId = id;
+
+            g.appendChild(elText);
             svgTarget.appendChild(g);
+            
+            // 已移除 textBackground 逻辑
+            return g;
+        }
 
-            // // 3) 可选文字背景
-            // if (s.textBackground) {
-            //     const bb = elText.getBBox();
-            //     const pad = s.textBgPadding ?? 3;
-            //     const bg = document.createElementNS(SVG_NS, "rect");
-            //     bg.setAttribute("id", `${id}-text-bg`);
-            //     // 背景框相对于文字居中
-            //     bg.setAttribute("x", bb.x - pad);
-            //     bg.setAttribute("y", bb.y - pad);
-            //     bg.setAttribute("width", bb.width + pad * 2);
-            //     bg.setAttribute("height", bb.height + pad * 2);
-            //     bg.setAttribute("rx", 2);
-            //     bg.setAttribute("ry", 2);
-            //     bg.setAttribute("fill", s.textBgFill ?? "white");
-            //     bg.setAttribute("fill-opacity", s.textBgOpacity ?? 1);
-            //     bg.setAttribute("stroke", "none");
-            //     // 插入到文字前面
-            //     textGroup.insertBefore(bg, elText);
-            // }
+        /**
+         * [Type 4] 纯文字标注 (修改版：永远水平)
+         * 
+         * 特点：
+         * 1. 纯水平展示，无任何旋转。
+         * 2. 如果手动设置了偏移 (dx, dy)，会自动调整 text-anchor 使得文字视觉中心更自然。
+         */
+        function drawTextLabel(config) {
+            const {
+                id,
+                text,
+                x, y, z,
+                projectFn = Projections.OBLIQUE,
+                styles = {}
+            } = config;
+
+            const s = { ...DEFAULT_ANNOTATION_STYLES, ...styles };
+            
+            const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
+            if (!svgTarget) throw new Error("drawTextLabel: global svg not found.");
+
+            // 1) 3D 投影
+            const pt = projectFn(x, y, z, config);
+
+            // 2) 偏移量
+            const dx = s.dx || 0;
+            const dy = s.dy || 0;
+            
+            const finalX = pt.px + dx;
+            const finalY = pt.py + dy;
+
+            // 3) 自动判断对齐方式 (Smart Anchor)
+            // 如果用户设定了 dx (例如 dx=20，向右偏移)，则文字应该 start 对齐，以免覆盖原点
+            let anchor = s.anchor || "middle"; // 默认居中
+            
+            // 如果没有强制指定 anchor，且有水平偏移，自动优化
+            if (!s.anchor && Math.abs(dx) > 5) {
+                if (dx > 0) anchor = "start";
+                else anchor = "end";
+            }
+
+            const g = document.createElementNS(SVG_NS, "g");
+            g.setAttribute("id", id);
+            
+            const elText = document.createElementNS(SVG_NS, "text");
+            elText.setAttribute("id", `${id}-text`);
+            elText.setAttribute("x", finalX);
+            elText.setAttribute("y", finalY);
+            elText.textContent = text;
+
+            // 样式应用
+            elText.setAttribute("font-size", s.fontSize);
+            elText.setAttribute("font-family", s.fontFamily);
+            elText.setAttribute("fill", s.textFill || "#333");
+            elText.setAttribute("text-anchor", anchor);
+            elText.setAttribute("dominant-baseline", s.baseline || "middle");
+
+            // Halo 光晕
+            elText.setAttribute("stroke", s.haloStroke || "white");
+            elText.setAttribute("stroke-width", s.haloWidth || 3);
+            elText.setAttribute("paint-order", "stroke");
+            elText.setAttribute("stroke-linejoin", "round");
+            if (s.opacity != null) elText.setAttribute("fill-opacity", s.opacity);
+
+            // 智能避让元数据
+            // 计算虚拟法向（如果 dx/dy 存在，就认为是该方向）
+            let nx = 0, ny = -1; // 默认向上
+            const dist = Math.hypot(dx, dy);
+            if (dist > 1) {
+                nx = dx / dist;
+                ny = dy / dist;
+            }
+
+            elText.classList.add("smart-label");
+            elText.dataset.parentId = id;
+            elText.dataset.ox = finalX;
+            elText.dataset.oy = finalY;
+            elText.dataset.nx = nx;
+            elText.dataset.ny = ny;
+            elText.dataset.limit = s.avoidLimit || 40; 
+
+            g.appendChild(elText);
+            svgTarget.appendChild(g);
 
             return g;
         }
