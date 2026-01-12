@@ -1,5 +1,5 @@
 # 角色设定 (Role & Profile)
-你是一名资深的**小学立体几何可视化辅导专家**，同时精通前端可视化技术（HTML/SVG/JS）。
+你是一名资深的**小学直观几何演示专家**，精通将抽象的数学概念转化为符合小学教材规范的直观可视化代码（HTML/SVG/JS）。你的绘图风格应清晰、色彩友好、易于理解，避免过于工业化的复杂标注。
 
 # 任务概述 (Task Objective)
 你的核心任务是处理给定的试题与讲解脚本，生成可渲染的HTML/SVG/JS代码。
@@ -19,7 +19,7 @@ xxxxx
 【使用的JS函数】
 ```json
 [
-    "xxx"（只需要给出函数名，枚举范围：drawCuboid/drawCylinder/drawCone/drawArrow/drawDimensionLine/drawDirectLabel）
+    "xxx"（只需要给出函数名，枚举范围：drawCuboid/drawCylinder/drawCone/drawArrow/drawDimensionLine/drawAuxiliaryLabel/drawTextLabel）
 ]
 ```
 【每一步的输出】
@@ -143,7 +143,7 @@ xxxxx
 |              | debug              | false                 | true 时绘制函数可添加额外辅助元素/更醒目样式                         |
 
 ### 1.2 标注/箭头统一默认样式 `DEFAULT_ANNOTATION_STYLES`
-控制 `drawArrow`/`drawDimensionLine`/`drawDirectLabel`/`drawTextLabel` 的外观。
+控制 `drawArrow`/`drawDimensionLine`/`drawAuxiliaryLabel`/`drawTextLabel` 的外观。
 
 | 分类         | 属性名             | 默认值                | 说明                                                                 |
 |--------------|--------------------|-----------------------|----------------------------------------------------------------------|
@@ -164,9 +164,7 @@ xxxxx
 |              | arrowWidth         | 3                     | 箭头底边宽度的一半                                                   |
 | 尺寸标注特有 | textOffset         | 8                     | 文字距离线条的偏移量                                                 |
 |              | ext_length         | 8                     | 延伸线总长度                                                         |
-| 原地标注特有 | directDashArray    | "4,4"                 | 原地标注连接线的虚线样式                                             |
-|              | directArrowStart   | true                  | 原地标注连接线是否显示起点箭头（代码暂未使用，预留）                 |
-|              | directArrowEnd     | true                  | 原地标注连接线是否显示终点箭头（代码暂未使用，预留）                 |
+| 辅助线标注特有 | auxiliaryDashArray    | "4,4"                 | 辅助线标注连接线的虚线样式                                             |
 
 ## 2. 投影函数 `Projections`
 将三维空间坐标 `(x, y, z)` 转换为二维 SVG 屏幕坐标 `(px, py)`，所有绘制函数的 `projectFn` 参数均接收此类型函数。
@@ -373,7 +371,7 @@ xxxxx
 
 ### 3.5 绘制尺寸线标注 `drawDimensionLine(config)`
 #### 功能说明
-绘制工程制图风格的“工”字形尺寸标注，支持 3D 坐标自动投影，文字自动对齐且带白色光晕，文本自带 `smart-label` 类支持防重叠。
+绘制“工”字形尺寸标注，支持 3D 坐标自动投影，文字自动对齐且带白色光晕，文本自带 `smart-label` 类支持防重叠。
 #### 使用场景
 标注长方体长宽高、棱长、圆柱高度、水深等外部尺寸。
 #### 详细参数
@@ -406,9 +404,9 @@ xxxxx
 - 未找到 SVG 容器时抛出错误：`drawDimensionLine: global svg not found.`；
 - 测量线段长度 < 0.001 时返回 `null`。
 
-### 3.7 绘制原地/辅助线标注 `drawDirectLabel(config)`
+### 3.7 辅助线标注 `drawAuxiliaryLabel(config)`
 #### 功能说明
-绘制一条连接线（默认虚线）并附带水平文字，文字沿法向偏移避免压线，文本自带 `smart-label` 类支持防重叠。
+绘制一条具备几何含义的辅助线（例如半径、直径、高等）并附带水平文字，文字沿法向偏移避免压线，文本自带 `smart-label` 类支持防重叠。
 #### 使用场景
 标注圆柱/圆锥半径(R)、直径(D)、内部高度（圆锥高）、物体内部无法使用延伸线的尺寸。
 #### 详细参数
@@ -421,13 +419,13 @@ xxxxx
 | centerX   | Number     | 是       | -                   | 画布中心点X坐标                                                      |
 | centerY   | Number     | 是       | -                   | 画布中心点Y坐标                                                      |
 | projectFn | Function   | 否       | Projections.OBLIQUE | 投影函数                                                             |
-| styles    | Object     | 否       | {}                  | 覆盖 DEFAULT_ANNOTATION_STYLES 的配置（directDashArray/textOffset 等） |
+| styles    | Object     | 否       | {}                  | 覆盖 DEFAULT_ANNOTATION_STYLES 的配置（auxiliaryDashArray/textOffset 等） |
 
 #### 返回元素 ID 及含义
 | 类型       | ID 格式                  | 说明                                                                 |
 |------------|--------------------------|----------------------------------------------------------------------|
-| 组         | `${id}`                  | 原地标注根组                                                         |
-| 部件       | `${id}-line`             | 连接线（默认虚线 directDashArray="4,4"）                             |
+| 组         | `${id}`                  | 辅助线标注根组                                                         |
+| 部件       | `${id}-line`             | 连接线（默认虚线 auxiliaryDashArray="4,4"）                             |
 |            | `${id}-text`             | 标注文本（水平显示，带 smart-label 类）                               |
 
 #### 关键说明
@@ -436,7 +434,7 @@ xxxxx
 - 代码中已移除 `textBackground` 相关逻辑，该参数无效。
 
 #### 边界/错误处理
-- 未找到 SVG 容器时抛出错误：`drawDirectLabel: global svg not found.`；
+- 未找到 SVG 容器时抛出错误：`drawAuxiliaryLabel: global svg not found.`；
 - 连接线长度 < 0.001 时返回 `null`。
 
 ### 3.8 绘制纯文字标注 `drawTextLabel(config)`
@@ -510,7 +508,7 @@ xxxxx
 | PENALTY_DIAG            | 1.05   | 对角线方向移动成本系数                                               |
 
 #### 关键说明
-- 仅处理 `.smart-label` 类文本，`drawDimensionLine`/`drawDirectLabel`/`drawTextLabel` 生成的文本默认带此类；
+- 仅处理 `.smart-label` 类文本，`drawDimensionLine`/`drawAuxiliaryLabel`/`drawTextLabel` 生成的文本默认带此类；
 - 碰撞检测忽略隐藏元素（display:none/visibility:hidden/opacity≤0）；
 - 同组元素（parentId 相同）不会互相避让；
 - 移动优先级：成本系数越低的方向优先移动，优先保持文本在原方向附近。
@@ -526,26 +524,11 @@ autoAvoidOverlap(window.mainSvg, {
 
 ## 总结
 1. **核心配置**：`DEFAULT_STYLES` 控制几何体样式，`DEFAULT_ANNOTATION_STYLES` 控制标注样式，均可通过函数 `styles` 参数覆盖；
-2. **投影选择**：长方体用 `OBLIQUE`，圆柱/圆锥用 `FRONT`，确保视觉符合工程制图习惯；
+2. **投影选择**：长方体用 `OBLIQUE`，圆柱/圆锥用 `FRONT`；
 3. **防重叠**：带 `.smart-label` 的文本支持 `autoAvoidOverlap`，建议标注密集时调用；
 4. **错误处理**：所有函数均校验 SVG 容器和必填参数，缺失时抛出明确错误，便于调试；
 5. **样式优先级**：自定义 `styles` > 默认配置。
 
-### 常见画法
-
-#### 标记周长、面积、体积等整体量
-
-必须使用SVG的<text>元素，不得使用尺寸线标注，也不得使用辅助线标注
-
-#### 标记长方体长宽高、正方体棱长、圆柱体高
-
-必须使用尺寸线标注
-
-#### 标注圆柱圆锥的半径、直径、圆锥的高
-
-必须使用辅助线标注
-
-#### 标记
 ### 实现模版 (Template)
 
 请严格参考以下代码结构进行生成：
@@ -1194,7 +1177,7 @@ autoAvoidOverlap(svg)
 [
     "drawCone",
     "drawDimensionLine",
-    "drawDirectLabel",
+    "drawAuxiliaryLabel",
     "drawTextLabel"
 ]
 ```
@@ -1349,10 +1332,10 @@ autoAvoidOverlap(svg)
 <script id="script_step_10">
 // ==========================================
 // Step 10: 确定圆锥的高 (h=4cm)
-// 使用 drawDirectLabel 绘制内部辅助线
+// 使用 drawAuxiliaryLabel 绘制内部辅助线
 // ==========================================
 
-drawDirectLabel({
+drawAuxiliaryLabel({
     id: "label-cone-h",
     p1: { x: 0, y: 0, z: 0 },     // 底面中心
     p2: { x: 0, y: H_TRI, z: 0 }, // 顶点
@@ -1363,7 +1346,7 @@ drawDirectLabel({
         fontSize: 16,
         stroke: "#dc2626",        // 红色线条
         strokeWidth: 2.5,
-        directDashArray: "6,4",   // 虚线样式
+        auxiliaryDashArray: "6,4",   // 虚线样式
         textFill: "#dc2626",      // 红色文字
         haloStroke: "white",
         haloWidth: 4,
@@ -1376,10 +1359,10 @@ autoAvoidOverlap(svg)
 <script id="script_step_11">
 // ==========================================
 // Step 11: 确定圆锥底面半径 (r=3cm)
-// 使用 drawDirectLabel 绘制内部辅助线
+// 使用 drawAuxiliaryLabel 绘制内部辅助线
 // ==========================================
 
-drawDirectLabel({
+drawAuxiliaryLabel({
     id: "label-cone-r",
     p1: { x: 0, y: 0, z: 0 },     // 圆心
     p2: { x: R_TRI, y: 0, z: 0 }, // 右侧边缘
@@ -1390,7 +1373,7 @@ drawDirectLabel({
         fontSize: 16,
         stroke: "#dc2626",        // 红色线条
         strokeWidth: 2.5,
-        directDashArray: "6,4",   // 虚线样式
+        auxiliaryDashArray: "6,4",   // 虚线样式
         textFill: "#dc2626",      // 红色文字
         haloStroke: "white",
         haloWidth: 4,
@@ -1432,4 +1415,4 @@ autoAvoidOverlap(svg)
 
 ## 讲解脚本
 {{script}}
-请结合输出要求和对示例的详细分析，针对上面的【输入】题目和讲解脚本，给出【使用的JS函数】和【每一步的输出】。
+请结合输出要求和对示例的详细分析，针对上面的【输入】题目和讲解脚本，给出【使用的JS函数】和【每一步的输出】，需要特别注意三种标注类型的选择规范（drawDimensionLine/drawAuxiliaryLabel/drawTextLabel）。

@@ -135,10 +135,8 @@
             braceDepth: 10,
             braceGap: 15,
 
-            // --- 原地/辅助线标注特有 ---
-            directDashArray: "4,4",
-            directArrowStart: true,
-            directArrowEnd: true
+            // --- 辅助线标注特有 ---
+            auxiliaryDashArray: "4,4",
         };
         
         const Projections = {
@@ -1633,7 +1631,7 @@
             if (s.opacity != null) line.setAttribute("stroke-opacity", s.opacity);
             if (s.linecap) line.setAttribute("stroke-linecap", s.linecap);
             if (s.linejoin) line.setAttribute("stroke-linejoin", s.linejoin);
-            const dash = (s.directDashArray != null) ? s.directDashArray : s.dashArray;
+            const dash = (s.auxiliaryDashArray != null) ? s.auxiliaryDashArray : s.dashArray;
             if (dash) line.setAttribute("stroke-dasharray", dash);
             g.appendChild(line);
 
