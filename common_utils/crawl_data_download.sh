@@ -63,9 +63,9 @@
 # 资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_6
 # 资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_7"
 
-tasks="资源教育部-辅学-图形化讲解_141_gemini-3-pro-preview-thinking_郭冬杰_1768200126779-小数单模-立体几何_试标_phase1爬取输入_part001_pv3"
+tasks="资源教育部-辅学-图形化讲解_148_gemini-3-pro-preview-thinking_郭冬杰_1768206403308-小数单模-立体几何_试标_phase2爬取输入_part001_pv3"
 
-save_dir=/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/2.phase1爬取输出
+save_dir=/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/3.phase2爬取输出
 
 while IFS= read -r line; do
     nohup python /mnt/pan8T/temp_djguo/dataprocessor/common_utils/crawl_data_download.py --save_dir=${save_dir} --task_name=${line} > nohup.log 2>&1 &

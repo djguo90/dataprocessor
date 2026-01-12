@@ -102,1865 +102,270 @@ xxxxx
 1. 尽量不要使用drawArrow函数，如果使用，只能使用水平方向的箭头。
 2. 对于长方体或正方体，必须使用斜二测画法，对于圆柱体，圆锥体，必须使用正视图画法。
 
-### 默认样式配置及核心工具函数
-
-以下是绘制几何图形的默认配置以及核心工具函数，可供调用。
-
-#### 默认配置
-```javascript
-// =====================
-// 1) 几何体统一默认样式
-// =====================
-const DEFAULT_STYLES = {
-    // --- 边线 (visible edges) ---
-    edgeStroke: "#333",        // 边线颜色
-    edgeWidth: 2,              // 边线宽度
-    edgeOpacity: 1,            // 边线透明度
-    edgeLinecap: "round",      // butt | round | square
-    edgeLinejoin: "round",     // miter | round | bevel
-    edgeMiterlimit: 4,         // join=miter 时的尖角限制
-
-    // --- 不可见线 (hidden edges) ---
-    dashArray: "5,5",          // 兼容旧字段：不可见线默认虚线样式（你现有代码用这个）
-    hiddenDashArray: "5,5",    // 推荐新字段：专门给 hidden 用
-    hiddenStroke: "#333",      // 可设置为更淡，比如 "#666"
-    hiddenWidth: null,         // null 表示沿用 edgeWidth；也可单独设置
-    hiddenOpacity: 1,          // 可设置为 0.8/0.6 更像工程制图
-
-    // --- 面 (faces) ---
-    faceFill: "rgba(0,0,0,0)", // 面填充色 (默认透明)
-    faceOpacity: 1,            // 面整体透明度（可配合 faceFill 使用）
-    faceStroke: "none",        // 面描边颜色（默认不描边）
-    faceStrokeWidth: 0,        // 面描边宽度
-    faceStrokeOpacity: 1,      // 面描边透明度
-
-    // --- 顶点 (vertices) ---
-    showVertices: false,       // 是否显示顶点
-    vertexRadius: 4,           // 顶点半径
-    vertexFill: "#333",        // 顶点填充
-    vertexStroke: "none",      // 顶点描边
-    vertexStrokeWidth: 0,      // 顶点描边宽度
-    vertexOpacity: 1,          // 顶点透明度
-
-    // --- 圆类细分 (cylinder/cone smoothing) ---
-    segments: 72,              // 圆周分段数（圆柱/圆锥默认可读这个）
-
-    // --- 调试辅助 ---
-    showCenters: false,        // 是否显示几何中心点（圆柱/圆锥等）
-    centerRadius: 3,
-    centerFill: "#e11d48",     // 调试用醒目色
-    debug: false               // true 时可让你的绘制函数加额外辅助元素/更醒目样式
-};
-
-// =====================
-// 2) 标注/箭头统一默认样式（建议）
-//   适用于 drawArrow / drawDimensionLine / drawCurlyBraceLabel / drawDirectLabel
-// =====================
-const DEFAULT_ANNOTATION_STYLES = {
-    // --- 线条/箭头通用 ---
-    stroke: "#333",
-    strokeWidth: 1.5,
-    opacity: 1,
-    linecap: "round",
-    linejoin: "round",
-    dashArray: null,           // null 表示实线；如 "4,4"
-
-    fill: "#333",              // 箭头/实体符号填充色
-
-    // --- 文字通用 ---
-    fontSize: 14,
-    fontFamily: "Arial, sans-serif",
-    textFill: "#333",
-
-    // 文字光晕（你现在是白描边 halo）
-    haloStroke: "white",
-    haloWidth: 3,
-    haloLinejoin: "round",
-
-    // 可选：强背景（比 halo 更“遮挡线条”）
-    textBackground: false,
-    textBgFill: "white",
-    textBgOpacity: 1,
-    textBgPadding: 3,          // 背景 padding（需要你在代码里用 <rect> 实现）
-
-    // --- 箭头参数（arrow/dim/direct 都可能用到） ---
-    arrowSize: 8,
-    arrowWidth: 3,
-
-    // --- 尺寸标注特有（drawDimensionLine） ---
-    textOffset: 10,
-    gap: 5,
-    ext_length: 10,
-
-    // --- 花括号特有（drawCurlyBraceLabel） ---
-    braceDepth: 10,
-    braceGap: 15,
-
-    // --- 原地/辅助线标注特有（drawDirectLabel） ---
-    directDashArray: "4,4",
-    directArrowStart: true,
-    directArrowEnd: true
-};
-```
-
-#### 投影函数（二维三维图形通用）
-```javascript
-const Projections = {
-    /** 
-     * 策略 A: 斜二测 (数学标准，适合组合)
-     * 特点：X轴随Z轴偏移，圆是歪的
-     */
-    OBLIQUE: function(x, y, z, config) {
-        const { centerX, centerY, k = 0.5, angle = Math.PI / 4 } = config;
-        return {
-            px: centerX + x + z * k * Math.cos(angle),
-            py: centerY - (y + z * k * Math.sin(angle))
-        };
-    },
-
-    /** 
-     * 策略 B: 正视图 (视觉优化，适合单独圆柱)
-     * 特点：X轴不变，圆是平的
-     */
-    FRONT: function(x, y, z, config) {
-        const { centerX, centerY, k = 0.3 } = config;
-        return {
-            px: centerX + x,
-            py: centerY - (y + z * k)
-        };
-    }
-};
-```
-
-#### 自动位置调整
-```javascript
-/**
- * 全局函数：自动调整带有 .smart-label 类的文本位置，使其不遮挡几何图形。
- * 
- * 原理：
- * 1. 找到所有几何图形（path, line, polygon, rect）。
- * 2. 遍历所有智能标签。
- * 3. 检测标签与几何图形是否重叠。
- * 4. 如果重叠，分别模拟“法向”、“切向+”、“切向-”三个方向，谁先找到空位且移动距离最短，就选谁。
- * 5. 重复尝试，直到不重叠或达到最大尝试次数。
- * 
- * @param {SVGElement} svgRoot - 根 SVG 元素
- */
-function autoAvoidOverlap(svgRoot, opts = {}) {
-  if (!svgRoot) svgRoot = window.mainSvg;
-  if (!svgRoot) return;
-
-  // ===== 可调参数（你也可以在调用时覆盖）=====
-  const MAX_STEPS = opts.MAX_STEPS ?? 28;              // 每个方向最多尝试步数
-  const STEP_SIZE = opts.STEP_SIZE ?? 4;               // 每步距离(px)
-  const PADDING   = opts.PADDING   ?? 2;               // 碰撞缓冲(px)
-  const PASSES    = opts.PASSES    ?? 2;               // 多轮迭代，提升多标签稳定性
-
-  // 切向最大搜索距离：关键！默认给大一些，避免 dataset.limit 太小导致“上下走不通”
-  const TANGENT_MAX_DIST = opts.TANGENT_MAX_DIST ?? 120;
-
-  // 法向软上限：超过这个距离仍可走，但会被额外惩罚，避免“往右跑飞”
-  const NORMAL_SOFT_LIMIT = opts.NORMAL_SOFT_LIMIT ?? 28;   // px
-  const NORMAL_OVER_PENALTY = opts.NORMAL_OVER_PENALTY ?? 1.6; // 越大越不愿意跑远
-
-  // 各方向基础惩罚系数（越小越优先）
-  const PENALTY_NORMAL      = opts.PENALTY_NORMAL      ?? 1.0;
-  const PENALTY_TANGENT     = opts.PENALTY_TANGENT     ?? 0.95;  // 让“上下”略优先一点
-  const PENALTY_NORMAL_OPP  = opts.PENALTY_NORMAL_OPP  ?? 1.15;
-  const PENALTY_DIAG        = opts.PENALTY_DIAG        ?? 1.05;
-
-  // ===== 1) 障碍物：几何 + 非 smart-label 的 text（比如 S=50cm²）=====
-  const obstacles = Array.from(
-    svgRoot.querySelectorAll("path, polygon, line, rect, circle, ellipse, text:not(.smart-label)")
-  );
-  const labels = Array.from(svgRoot.querySelectorAll("text.smart-label"));
-  if (!labels.length) return;
-
-  const isVisibleEl = (el) => {
-    const style = window.getComputedStyle(el);
-    if (!style) return true;
-    if (style.display === "none" || style.visibility === "hidden") return false;
-    if (parseFloat(style.opacity || "1") <= 0) return false;
-    return true;
-  };
-
-  const rectsOverlap = (a, b) => !(
-    a.x > b.x + b.width ||
-    a.x + a.width < b.x ||
-    a.y > b.y + b.height ||
-    a.y + a.height < b.y
-  );
-
-  const getInflatedBBox = (el, pad) => {
-    const bb = el.getBBox();
-    let sw = 0;
-    const swAttr = el.getAttribute("stroke-width");
-    if (swAttr != null) sw = parseFloat(swAttr) || 0;
-    const inflate = pad + sw * 0.5;
-    return {
-      x: bb.x - inflate,
-      y: bb.y - inflate,
-      width: bb.width + inflate * 2,
-      height: bb.height + inflate * 2
-    };
-  };
-
-  // ===== 2) 关键修复：按 text-anchor / dominant-baseline 算虚拟 Rect =====
-  const makeTextRectCalculator = (textEl, w, h) => {
-    const anchor = (textEl.getAttribute("text-anchor") || "middle").trim();
-    const baseline = (textEl.getAttribute("dominant-baseline") || "middle").trim();
-
-    // halo 也算进碰撞（文字描边）
-    const haloW = parseFloat(textEl.getAttribute("stroke-width") || "0") || 0;
-    const inflate = PADDING + haloW * 0.5;
-
-    return (x, y) => {
-      let rx;
-      if (anchor === "start") rx = x;
-      else if (anchor === "end") rx = x - w;
-      else rx = x - w / 2;
-
-      let ry;
-      if (baseline === "middle" || baseline === "central") ry = y - h / 2;
-      else if (baseline === "hanging" || baseline === "text-before-edge") ry = y;
-      else if (baseline === "text-after-edge") ry = y - h;
-      else ry = y - h / 2;
-
-      return {
-        x: rx - inflate,
-        y: ry - inflate,
-        width: w + inflate * 2,
-        height: h + inflate * 2
-      };
-    };
-  };
-
-  const checkCollision = (vrect, ignoreGroup, placedLabelRects) => {
-    // 几何/文字障碍物
-    for (const shape of obstacles) {
-      if (!isVisibleEl(shape)) continue;
-      if (ignoreGroup && ignoreGroup.contains(shape)) continue;
-      const r = getInflatedBBox(shape, PADDING);
-      if (rectsOverlap(vrect, r)) return true;
-    }
-    // 已安置标签（实现标签互避）
-    for (const item of placedLabelRects) {
-      if (ignoreGroup && item.group && ignoreGroup === item.group) continue;
-      if (rectsOverlap(vrect, item.rect)) return true;
-    }
-    return false;
-  };
-
-  const norm2 = (x, y) => {
-    const L = Math.hypot(x, y);
-    if (L < 1e-9) return { x: 0, y: 0 };
-    return { x: x / L, y: y / L };
-  };
-
-  // ===== 3) 多轮迭代处理多标签 =====
-  for (let pass = 0; pass < PASSES; pass++) {
-    let movedAny = false;
-    const placed = []; // 本轮已放置标签的 rect，后续标签要避开它们
-
-    for (const textEl of labels) {
-      if (!isVisibleEl(textEl)) continue;
-
-      // 来自 drawDimensionLine 的向量信息
-      const nx0 = parseFloat(textEl.dataset.nx || "0");
-      const ny0 = parseFloat(textEl.dataset.ny || "1");
-      const ux0 = parseFloat(textEl.dataset.ux || "1");
-      const uy0 = parseFloat(textEl.dataset.uy || "0");
-
-      const ox = parseFloat(textEl.dataset.ox || textEl.getAttribute("x") || "0");
-      const oy = parseFloat(textEl.dataset.oy || textEl.getAttribute("y") || "0");
-
-      // 你原先的 limit 很小，这里把它当“建议值”，实际最大用 TANGENT_MAX_DIST
-      const rawLimit = parseFloat(textEl.dataset.limit);
-      const tangentMaxDist = Math.max(
-        isFinite(rawLimit) ? rawLimit : 0,
-        TANGENT_MAX_DIST
-      );
-
-      const parentId = textEl.dataset.parentId;
-      const myGroup = parentId ? document.getElementById(parentId) : (textEl.closest("g") || null);
-
-      // 先恢复原点测尺寸
-      textEl.setAttribute("x", ox);
-      textEl.setAttribute("y", oy);
-      const baseBox = textEl.getBBox();
-      const w = baseBox.width;
-      const h = baseBox.height;
-
-      const calcRect = makeTextRectCalculator(textEl, w, h);
-
-      // 起点如果不撞，仍然要加入 placed（避免其他标签盖上来）
-      const startRect = calcRect(ox, oy);
-
-      const N  = norm2(nx0, ny0);
-      const U  = norm2(ux0, uy0);
-
-      // 候选方向：法向±、切向±、斜向（法+切 的组合）
-      const dirs = [
-        { name: "normal",     vx: N.x,        vy: N.y,        maxDist: null,          basePenalty: PENALTY_NORMAL },
-        { name: "tangent+",   vx: U.x,        vy: U.y,        maxDist: tangentMaxDist, basePenalty: PENALTY_TANGENT },
-        { name: "tangent-",   vx: -U.x,       vy: -U.y,       maxDist: tangentMaxDist, basePenalty: PENALTY_TANGENT },
-        { name: "normalOpp",  vx: -N.x,       vy: -N.y,       maxDist: null,          basePenalty: PENALTY_NORMAL_OPP },
-
-        // 斜向：更容易找到“近的空位”
-        (() => { const v = norm2(N.x + U.x, N.y + U.y); return { name:"diag1", vx:v.x, vy:v.y, maxDist: 120, basePenalty: PENALTY_DIAG }; })(),
-        (() => { const v = norm2(N.x - U.x, N.y - U.y); return { name:"diag2", vx:v.x, vy:v.y, maxDist: 120, basePenalty: PENALTY_DIAG }; })(),
-        (() => { const v = norm2(-N.x + U.x, -N.y + U.y); return { name:"diag3", vx:v.x, vy:v.y, maxDist: 120, basePenalty: PENALTY_DIAG }; })(),
-        (() => { const v = norm2(-N.x - U.x, -N.y - U.y); return { name:"diag4", vx:v.x, vy:v.y, maxDist: 120, basePenalty: PENALTY_DIAG }; })(),
-      ].filter(d => Math.hypot(d.vx, d.vy) > 1e-6);
-
-      const findBestInDir = (dir) => {
-        let best = null;
-
-        for (let i = 0; i <= MAX_STEPS; i++) {
-          const dist = i * STEP_SIZE;
-          if (dir.maxDist != null && dist > dir.maxDist) break;
-
-          const x = ox + dir.vx * dist;
-          const y = oy + dir.vy * dist;
-          const vrect = calcRect(x, y);
-
-          if (checkCollision(vrect, myGroup, placed)) continue;
-
-          // 代价：基础距离 * 惩罚
-          // 对“normal”加入跑远惩罚，避免向右走太多
-          let cost = dist * dir.basePenalty;
-
-          if (dir.name === "normal" && dist > NORMAL_SOFT_LIMIT) {
-            cost += (dist - NORMAL_SOFT_LIMIT) * NORMAL_OVER_PENALTY;
-          }
-
-          // 找到就先记录，但继续看看同方向有没有更低 cost（通常 i 越小越好）
-          if (!best || cost < best.cost) {
-            best = { x, y, rect: vrect, steps: i, cost, name: dir.name };
-          }
-
-          // 同方向 i 越大通常越差，这里可直接 break 加速
-          // 但为了稳一点（考虑 normal 跑远惩罚），我们不 break，让它有机会在同方向选更合理的点
-        }
-
-        return best;
-      };
-
-      // 如果起点不撞：仍可能需要微调以避开“标签-标签”，所以也纳入候选
-      let bestOverall = null;
-      if (!checkCollision(startRect, myGroup, placed)) {
-        bestOverall = { x: ox, y: oy, rect: startRect, steps: 0, cost: 0, name: "stay" };
-      }
-
-      for (const dir of dirs) {
-        const cand = findBestInDir(dir);
-        if (!cand) continue;
-        if (!bestOverall || cand.cost < bestOverall.cost) bestOverall = cand;
-      }
-
-      if (!bestOverall) {
-        // 全都堵死：保持原位并落位
-        placed.push({ group: myGroup, rect: startRect, el: textEl });
-        continue;
-      }
-
-      // 应用最佳位置
-      if (bestOverall.steps > 0) movedAny = true;
-
-      textEl.setAttribute("x", bestOverall.x);
-      textEl.setAttribute("y", bestOverall.y);
-
-      // 背景框同步（避免你之前 s 未定义）
-      const bgEl =
-        (parentId && document.getElementById(`${parentId}-text-bg`)) ||
-        document.getElementById(`${textEl.id}-bg`) ||
-        document.getElementById(`${textEl.id}-text-bg`);
-
-      if (bgEl && bgEl.tagName.toLowerCase() === "rect") {
-        const bb = textEl.getBBox();
-        const pad = 3;
-        bgEl.setAttribute("x", bb.x - pad);
-        bgEl.setAttribute("y", bb.y - pad);
-        bgEl.setAttribute("width", bb.width + pad * 2);
-        bgEl.setAttribute("height", bb.height + pad * 2);
-      }
-
-      // 记录最终 rect，供后续标签避让
-      const finalRect = calcRect(bestOverall.x, bestOverall.y);
-      placed.push({ group: myGroup, rect: finalRect, el: textEl });
-    }
-
-    if (!movedAny) break;
-  }
-}
-```
-
-#### 长方体（包含正方体）
-```javascript
-/**
- * 绘制长方体 (支持自定义投影策略)
- *
- * @param {Object} config - 长方体配置对象
- * @param {string} config.id - SVG 元素的唯一 ID 前缀
- * @param {number} [config.x=0] - 左下前（靠近观察者）顶点 x (3D)
- * @param {number} [config.y=0] - 左下前（靠近观察者）顶点 y (3D)
- * @param {number} [config.z=0] - 左下前（靠近观察者）顶点 z (3D)
- * @param {number} config.w - 宽 (X轴跨度)
- * @param {number} config.h - 高 (Y轴跨度)
- * @param {number} config.d - 深 (Z轴跨度)
- * @param {number} config.centerX - 画布中心点 X（供投影函数使用）
- * @param {number} config.centerY - 画布中心点 Y（供投影函数使用）
- * @param {Function} [config.projectFn] - 投影函数 (例如 Projections.OBLIQUE)
- * @param {Object} [config.styles] - 样式覆盖（基于 DEFAULT_STYLES）
- * @returns {SVGGElement} g
- */
-function drawCuboid(config) {
-    const {
-        id,
-        x = 0, y = 0, z = 0,
-        w, h, d,
-        styles = {},
-        projectFn = Projections.OBLIQUE
-    } = config;
-
-    if (!id) throw new Error("drawCuboid: config.id is required.");
-    if (w == null || h == null || d == null) throw new Error("drawCuboid: config.w/h/d are required.");
-
-    const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
-    if (!svgTarget) throw new Error("drawCuboid: global svg not found.");
-
-    const s = { ...DEFAULT_STYLES, ...styles };
-
-    // ---------- 样式应用：边/隐藏边/面/点 ----------
-    const applyVisibleStroke = (el) => {
-        el.setAttribute("stroke", s.edgeStroke);
-        el.setAttribute("stroke-width", s.edgeWidth);
-        if (s.edgeOpacity != null) el.setAttribute("stroke-opacity", s.edgeOpacity);
-        if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
-        if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-        if (s.edgeLinejoin === "miter" && s.edgeMiterlimit != null) {
-            el.setAttribute("stroke-miterlimit", s.edgeMiterlimit);
-        }
-    };
-
-    const applyHiddenStroke = (el) => {
-        const hs = (s.hiddenStroke != null) ? s.hiddenStroke : s.edgeStroke;
-        const hw = (s.hiddenWidth != null) ? s.hiddenWidth : s.edgeWidth;
-        const ho = (s.hiddenOpacity != null) ? s.hiddenOpacity : s.edgeOpacity;
-        const hd = (s.hiddenDashArray != null) ? s.hiddenDashArray : s.dashArray;
-
-        el.setAttribute("stroke", hs);
-        el.setAttribute("stroke-width", hw);
-        if (ho != null) el.setAttribute("stroke-opacity", ho);
-        if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
-        if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-        if (s.edgeLinejoin === "miter" && s.edgeMiterlimit != null) {
-            el.setAttribute("stroke-miterlimit", s.edgeMiterlimit);
-        }
-        if (hd) el.setAttribute("stroke-dasharray", hd);
-    };
-
-    const applyFaceStyle = (poly) => {
-        poly.setAttribute("fill", s.faceFill);
-        if (s.faceOpacity != null) poly.setAttribute("fill-opacity", s.faceOpacity);
-
-        if (s.faceStroke && s.faceStroke !== "none" && (s.faceStrokeWidth || 0) > 0) {
-            poly.setAttribute("stroke", s.faceStroke);
-            poly.setAttribute("stroke-width", s.faceStrokeWidth);
-            if (s.faceStrokeOpacity != null) poly.setAttribute("stroke-opacity", s.faceStrokeOpacity);
-            if (s.edgeLinecap) poly.setAttribute("stroke-linecap", s.edgeLinecap);
-            if (s.edgeLinejoin) poly.setAttribute("stroke-linejoin", s.edgeLinejoin);
-        } else {
-            poly.setAttribute("stroke", "none");
-        }
-    };
-
-    const applyVertexStyle = (c) => {
-        c.setAttribute("r", s.vertexRadius);
-        c.setAttribute("fill", s.vertexFill);
-        if (s.vertexOpacity != null) c.setAttribute("fill-opacity", s.vertexOpacity);
-
-        if (s.vertexStroke && s.vertexStroke !== "none" && (s.vertexStrokeWidth || 0) > 0) {
-            c.setAttribute("stroke", s.vertexStroke);
-            c.setAttribute("stroke-width", s.vertexStrokeWidth);
-        } else {
-            c.setAttribute("stroke", "none");
-        }
-    };
-
-    // ---------- 1) 8 个顶点（3D） ----------
-    // 约定：0-3 为前表面(z)，4-7 为后表面(z+d)
-    // 0: 左下前, 1: 右下前, 2: 右上前, 3: 左上前
-    // 4: 左下后, 5: 右下后, 6: 右上后, 7: 左上后
-    const v3d = [
-        [x,   y,   z],     [x+w, y,   z],     [x+w, y+h, z],     [x,   y+h, z],
-        [x,   y,   z+d],   [x+w, y,   z+d],   [x+w, y+h, z+d],   [x,   y+h, z+d]
-    ];
-
-    // ---------- 2) 投影到 2D ----------
-    const pts = v3d.map(v => projectFn(v[0], v[1], v[2], config));
-
-    // ---------- 3) 面拓扑（先给“常识顺序”，后面会自动修正 winding） ----------
-    const facesTopology = [
-        { name: "front",  idx: [0, 1, 2, 3] },
-        { name: "back",   idx: [4, 5, 6, 7] },
-        { name: "right",  idx: [1, 2, 6, 5] },
-        { name: "left",   idx: [0, 4, 7, 3] },
-        { name: "top",    idx: [3, 7, 6, 2] },
-        { name: "bottom", idx: [0, 1, 5, 4] }
-    ];
-
-    // ---------- 4) 自动修正 face winding + 再算 faceVisibility ----------
-    const v3sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-    const v3dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
-    const v3cross = (a, b) => [
-        a[1]*b[2] - a[2]*b[1],
-        a[2]*b[0] - a[0]*b[2],
-        a[0]*b[1] - a[1]*b[0],
-    ];
-    const v3len = (a) => Math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
-    const v3norm = (a) => {
-        const L = v3len(a);
-        if (L < 1e-12) return [0, 0, 0];
-        return [a[0]/L, a[1]/L, a[2]/L];
-    };
-
-    const faceNormal3D = (idx) => {
-        const A = v3d[idx[0]];
-        const B = v3d[idx[1]];
-        const C = v3d[idx[2]];
-        return v3cross(v3sub(B, A), v3sub(C, A));
-    };
-
-    // 期望“朝外”的法线方向（基于 v3d 编号约定）
-    const EXPECT_OUTWARD = {
-        front:  [0, 0, -1],
-        back:   [0, 0,  1],
-        right:  [1, 0,  0],
-        left:   [-1,0,  0],
-        top:    [0, 1,  0],
-        bottom: [0,-1,  0],
-    };
-
-    // 4.1) 先修正 winding：让每个面的法线与“期望外法线”同向
-    facesTopology.forEach(face => {
-        const exp = EXPECT_OUTWARD[face.name];
-        if (!exp) return;
-        const n = faceNormal3D(face.idx);
-        if (v3dot(n, exp) < 0) {
-            face.idx = [...face.idx].reverse();
-        }
-    });
-
-    // 4.2) 估计 viewDir（对 OBLIQUE/FRONT 这类线性投影很稳）
-    const estimateViewDir = () => {
-        const eps = 1;
-        const p0 = projectFn(0, 0, 0, config);
-        const px = projectFn(eps, 0, 0, config);
-        const py = projectFn(0, eps, 0, config);
-        const pz = projectFn(0, 0, eps, config);
-
-        const row1 = [(px.px - p0.px)/eps, (py.px - p0.px)/eps, (pz.px - p0.px)/eps];
-        const row2 = [(px.py - p0.py)/eps, (py.py - p0.py)/eps, (pz.py - p0.py)/eps];
-
-        const v = v3cross(row1, row2);
-        const vn = v3norm(v);
-        return (v3len(vn) < 1e-9) ? [0, 0, -1] : vn;
-    };
-
-    const viewDir0 = estimateViewDir();
-
-    // 4.3) 用 2D 面积符号做一次“手性/正负号”校准（避免 viewDir 符号不确定）
-    const faceArea2D = (idx) => {
-        let area = 0;
-        for (let i = 0; i < idx.length; i++) {
-            const p1 = pts[idx[i]];
-            const p2 = pts[idx[(i + 1) % idx.length]];
-            area += (p1.px * p2.py - p2.px * p1.py);
-        }
-        return area;
-    };
-
-    // 选择最佳组合：flipViewDir? 以及 areaSign(neg/pos) 与 3D 可见性的一致性
-    const combos = [
-        { flipView: false, areaNegIsFront: true  },
-        { flipView: false, areaNegIsFront: false },
-        { flipView: true,  areaNegIsFront: true  },
-        { flipView: true,  areaNegIsFront: false },
-    ];
-
-    const EPS_AREA = 1e-6;
-    const EPS_DOT  = 1e-6;
-
-    let best = { score: -1, flipView: false, areaNegIsFront: true };
-    combos.forEach(c => {
-        const vd = c.flipView ? [-viewDir0[0], -viewDir0[1], -viewDir0[2]] : viewDir0;
-        let score = 0;
-        let total = 0;
-
-        facesTopology.forEach(face => {
-            const n = v3norm(faceNormal3D(face.idx));
-            if (v3len(n) < 1e-9) return;
-
-            const a = faceArea2D(face.idx);
-            if (Math.abs(a) < EPS_AREA) return;
-
-            const vis3 = v3dot(n, vd) > EPS_DOT;
-            const vis2 = c.areaNegIsFront ? (a < 0) : (a > 0);
-
-            score += (vis3 === vis2) ? 1 : 0;
-            total += 1;
-        });
-
-        // 用一致比例评分（避免 total 少导致误判）
-        const ratio = total ? (score / total) : 0;
-        if (ratio > best.score) best = { ...c, score: ratio };
-    });
-
-    const viewDir = best.flipView ? [-viewDir0[0], -viewDir0[1], -viewDir0[2]] : viewDir0;
-
-    const faceVisibility = {};
-    facesTopology.forEach(face => {
-        const n = v3norm(faceNormal3D(face.idx));
-        faceVisibility[face.name] = v3dot(n, viewDir) > EPS_DOT;
-    });
-
-    // ---------- 5) 组 ----------
-    const g = document.createElementNS(SVG_NS, "g");
-    g.setAttribute("id", id);
-
-    // ---------- 6) 先绘制面（保证边在线上层） ----------
-    facesTopology.forEach(face => {
-        const poly = document.createElementNS(SVG_NS, "polygon");
-        poly.setAttribute("id", `${id}-face-${face.name}`);
-        poly.setAttribute("points", face.idx.map(i => `${pts[i].px},${pts[i].py}`).join(" "));
-        applyFaceStyle(poly);
-        g.appendChild(poly);
-    });
-
-    // ---------- 7) 绘制边（自动虚实线） ----------
-    const edgesDefinitions = [
-        [0, 1], [1, 2], [2, 3], [3, 0], // 前圈
-        [4, 5], [5, 6], [6, 7], [7, 4], // 后圈
-        [0, 4], [1, 5], [2, 6], [3, 7]  // 连接棱
-    ];
-
-    edgesDefinitions.forEach((edgeIndices, i) => {
-        const [u, v] = edgeIndices;
-
-        // 查找共享此边的面（相邻顶点）
-        const sharedFaces = facesTopology.filter(f => {
-            const idxList = f.idx;
-            const posU = idxList.indexOf(u);
-            const posV = idxList.indexOf(v);
-            if (posU === -1 || posV === -1) return false;
-            const len = idxList.length;
-            return (posU === (posV + 1) % len) || (posV === (posU + 1) % len);
-        });
-
-        // 任一共享面可见 => 边可见
-        const isVisible = sharedFaces.some(f => faceVisibility[f.name]);
-
-        const line = document.createElementNS(SVG_NS, "line");
-        line.setAttribute("id", `${id}-edge-${i}`);
-        line.setAttribute("x1", pts[u].px);
-        line.setAttribute("y1", pts[u].py);
-        line.setAttribute("x2", pts[v].px);
-        line.setAttribute("y2", pts[v].py);
-
-        if (isVisible) applyVisibleStroke(line);
-        else applyHiddenStroke(line);
-
-        g.appendChild(line);
-    });
-
-    // ---------- 8) 顶点（可选） ----------
-    if (s.showVertices) {
-        pts.forEach((p, i) => {
-            const circle = document.createElementNS(SVG_NS, "circle");
-            circle.setAttribute("id", `${id}-vertex-${i}`);
-            circle.setAttribute("cx", p.px);
-            circle.setAttribute("cy", p.py);
-            applyVertexStyle(circle);
-            g.appendChild(circle);
-        });
-    }
-
-    // ---------- 9) 中心点（可选，带 id） ----------
-    if (s.showCenters) {
-        const pc = projectFn(x + w/2, y + h/2, z + d/2, config);
-        const c = document.createElementNS(SVG_NS, "circle");
-        c.setAttribute("id", `${id}-center`);
-        c.setAttribute("cx", pc.px);
-        c.setAttribute("cy", pc.py);
-        c.setAttribute("r", s.centerRadius || 3);
-        c.setAttribute("fill", s.centerFill || "#e11d48");
-        g.appendChild(c);
-    }
-
-    svgTarget.appendChild(g);
-    return g;
-}
-```
-
-#### 圆柱体
-```javascript
-/**
- * 绘制圆柱体 (支持自定义投影策略)
- * 
- * @param {Object} config - 配置对象
- * @param {string} config.id - SVG 元素 ID 前缀
- * @param {number} config.x - 底面圆心 x 坐标 (3D)
- * @param {number} config.y - 底面圆心 y 坐标 (3D)
- * @param {number} config.z - 底面圆心 z 坐标 (3D)
- * @param {number} config.r - 圆柱半径
- * @param {number} config.h - 圆柱高度
- * @param {number} config.centerX - 画布中心点 X
- * @param {number} config.centerY - 画布中心点 Y
- * @param {Function} [config.projectFn=Projections.FRONT] - 投影函数（圆柱/圆锥默认 FRONT）
- * @param {Object} [config.styles] - 样式配置
- */
-function drawCylinder(config) {
-    const {
-        id,
-        x, y, z, r, h,
-        projectFn = Projections.FRONT,
-        styles = {},
-    } = config;
-
-    const s = { ...DEFAULT_STYLES, ...styles };
-    const segments = (typeof s.segments === "number" && s.segments >= 12) ? s.segments : 72;
-
-    // ---- 样式应用工具：可见/不可见边、面 ----
-    const applyVisibleStroke = (el) => {
-        el.setAttribute("stroke", s.edgeStroke);
-        el.setAttribute("stroke-width", s.edgeWidth);
-        if (s.edgeOpacity != null) el.setAttribute("stroke-opacity", s.edgeOpacity);
-        if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
-        if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-        if (s.edgeLinejoin === "miter" && s.edgeMiterlimit != null) {
-            el.setAttribute("stroke-miterlimit", s.edgeMiterlimit);
-        }
-    };
-
-    const applyHiddenStroke = (el) => {
-        const hs = (s.hiddenStroke != null) ? s.hiddenStroke : s.edgeStroke;
-        const hw = (s.hiddenWidth != null) ? s.hiddenWidth : s.edgeWidth;
-        const ho = (s.hiddenOpacity != null) ? s.hiddenOpacity : s.edgeOpacity;
-        const hd = (s.hiddenDashArray != null) ? s.hiddenDashArray : s.dashArray;
-
-        el.setAttribute("stroke", hs);
-        el.setAttribute("stroke-width", hw);
-        if (ho != null) el.setAttribute("stroke-opacity", ho);
-        if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
-        if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-        if (s.edgeLinejoin === "miter" && s.edgeMiterlimit != null) {
-            el.setAttribute("stroke-miterlimit", s.edgeMiterlimit);
-        }
-        if (hd) el.setAttribute("stroke-dasharray", hd);
-    };
-
-    const applyFaceFill = (el) => {
-        el.setAttribute("fill", s.faceFill);
-        if (s.faceOpacity != null) el.setAttribute("fill-opacity", s.faceOpacity);
-
-        // 面描边（可选）
-        if (s.faceStroke && s.faceStroke !== "none" && (s.faceStrokeWidth || 0) > 0) {
-            el.setAttribute("stroke", s.faceStroke);
-            el.setAttribute("stroke-width", s.faceStrokeWidth);
-            if (s.faceStrokeOpacity != null) el.setAttribute("stroke-opacity", s.faceStrokeOpacity);
-            if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
-            if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-        } else {
-            el.setAttribute("stroke", "none");
-        }
-    };
-
-    // 1) 生成顶面/底面投影点
-    const bottomPts = [];
-    const topPts = [];
-    for (let i = 0; i < segments; i++) {
-        const theta = (i / segments) * Math.PI * 2;
-        const dx = r * Math.cos(theta);
-        const dz = r * Math.sin(theta);
-        bottomPts.push(projectFn(x + dx, y,     z + dz, config));
-        topPts.push(projectFn(   x + dx, y + h, z + dz, config));
-    }
-
-    const g = document.createElementNS(SVG_NS, "g");
-    g.setAttribute("id", id);
-
-    // 2) 找轮廓切点：屏幕 X 最小/最大
-    let minIdx = 0, maxIdx = 0;
-    bottomPts.forEach((p, i) => {
-        if (p.px < bottomPts[minIdx].px) minIdx = i;
-        if (p.px > bottomPts[maxIdx].px) maxIdx = i;
-    });
-
-    // 3) 弧线 path 数据
-    const getArcD = (pts, startIdx, endIdx) => {
-        let d = `M ${pts[startIdx].px},${pts[startIdx].py}`;
-        let i = startIdx;
-        while (i !== endIdx) {
-            i = (i + 1) % segments;
-            d += ` L ${pts[i].px},${pts[i].py}`;
-        }
-        return d;
-    };
-
-    // 4) 判断前后弧（通过两段中点 py）
-    const midIdxA = Math.floor((minIdx < maxIdx ? (minIdx + maxIdx) : (minIdx + maxIdx + segments)) / 2) % segments;
-    const midIdxB = Math.floor((maxIdx < minIdx ? (maxIdx + minIdx) : (maxIdx + minIdx + segments)) / 2) % segments;
-
-    const yA = bottomPts[midIdxA].py;
-    const yB = bottomPts[midIdxB].py;
-
-    let frontStart, frontEnd, backStart, backEnd;
-    if (yA > yB) {
-        frontStart = minIdx; frontEnd = maxIdx;
-        backStart = maxIdx;  backEnd = minIdx;
-    } else {
-        frontStart = maxIdx; frontEnd = minIdx;
-        backStart = minIdx;  backEnd = maxIdx;
-    }
-
-    // =========================
-    // (A) 面：底面/侧面/顶面（补齐 id）
-    // =========================
-
-    // A1) 底面 face——放在最底层
-    const bottomFace = document.createElementNS(SVG_NS, "polygon");
-    bottomFace.setAttribute("id", `${id}-bottom-face`);
-    bottomFace.setAttribute("points", bottomPts.map(p => `${p.px},${p.py}`).join(" "));
-    applyFaceFill(bottomFace);
-    g.appendChild(bottomFace);
-
-    // A2) 侧面 face（补齐：以前 sidePoly 没 id）
-    // 逻辑：沿“底面前弧”走一圈，再沿“顶面前弧”反向回来，形成侧面可见区域
-    const sidePolyPoints = [];
-    let curr = frontStart;
-    while (true) {
-        sidePolyPoints.push(bottomPts[curr]);
-        if (curr === frontEnd) break;
-        curr = (curr + 1) % segments;
-    }
-    curr = frontEnd;
-    while (true) {
-        sidePolyPoints.push(topPts[curr]);
-        if (curr === frontStart) break;
-        curr = (curr - 1 + segments) % segments;
-    }
-
-    const sideFace = document.createElementNS(SVG_NS, "polygon");
-    sideFace.setAttribute("id", `${id}-side-face`);
-    sideFace.setAttribute("points", sidePolyPoints.map(p => `${p.px},${p.py}`).join(" "));
-    sideFace.setAttribute("fill", s.faceFill);
-    if (s.faceOpacity != null) sideFace.setAttribute("fill-opacity", s.faceOpacity);
-    sideFace.setAttribute("stroke", "none");
-    g.appendChild(sideFace);
-
-    // A3) 顶面 face（已有 id：top-face）
-    const topFace = document.createElementNS(SVG_NS, "polygon");
-    topFace.setAttribute("id", `${id}-top-face`);
-    topFace.setAttribute("points", topPts.map(p => `${p.px},${p.py}`).join(" "));
-    topFace.setAttribute("fill", s.faceFill);
-    if (s.faceOpacity != null) topFace.setAttribute("fill-opacity", s.faceOpacity);
-
-    // 顶面边界通常要显示：这里用可见边样式描边（不依赖 faceStroke）
-    topFace.setAttribute("stroke", s.edgeStroke);
-    topFace.setAttribute("stroke-width", s.edgeWidth);
-    if (s.edgeOpacity != null) topFace.setAttribute("stroke-opacity", s.edgeOpacity);
-    if (s.edgeLinecap) topFace.setAttribute("stroke-linecap", s.edgeLinecap);
-    if (s.edgeLinejoin) topFace.setAttribute("stroke-linejoin", s.edgeLinejoin);
-    g.appendChild(topFace);
-
-    // =========================
-    // (B) 边：底面前后弧 + 侧棱
-    // =========================
-
-    // B1) 底面后弧（hidden）
-    const bottomBack = document.createElementNS(SVG_NS, "path");
-    bottomBack.setAttribute("id", `${id}-bottom-back`);
-    bottomBack.setAttribute("d", getArcD(bottomPts, backStart, backEnd));
-    bottomBack.setAttribute("fill", "none");
-    applyHiddenStroke(bottomBack);
-    g.appendChild(bottomBack);
-
-    // B2) 底面前弧（visible）
-    const bottomFront = document.createElementNS(SVG_NS, "path");
-    bottomFront.setAttribute("id", `${id}-bottom-front`);
-    bottomFront.setAttribute("d", getArcD(bottomPts, frontStart, frontEnd));
-    bottomFront.setAttribute("fill", "none");
-    applyVisibleStroke(bottomFront);
-    g.appendChild(bottomFront);
-
-    // B3) 侧棱（左右两条）
-    [minIdx, maxIdx].forEach((idx, i) => {
-        const line = document.createElementNS(SVG_NS, "line");
-        line.setAttribute("id", `${id}-side-${i}`);
-        line.setAttribute("x1", topPts[idx].px);    line.setAttribute("y1", topPts[idx].py);
-        line.setAttribute("x2", bottomPts[idx].px); line.setAttribute("y2", bottomPts[idx].py);
-        applyVisibleStroke(line);
-        g.appendChild(line);
-    });
-
-    // =========================
-    // (C) 调试点：中心点（可选）
-    // =========================
-    if (s.showCenters) {
-        const topCenter = projectFn(x, y + h, z, config);
-        const bottomCenter = projectFn(x, y, z, config);
-
-        const mk = (pt, cid) => {
-            const c = document.createElementNS(SVG_NS, "circle");
-            c.setAttribute("id", cid);
-            c.setAttribute("cx", pt.px);
-            c.setAttribute("cy", pt.py);
-            c.setAttribute("r", s.centerRadius || 3);
-            c.setAttribute("fill", s.centerFill || "#e11d48");
-            c.setAttribute("opacity", 1);
-            return c;
-        };
-
-        g.appendChild(mk(bottomCenter, `${id}-center-bottom`));
-        g.appendChild(mk(topCenter, `${id}-center-top`));
-    }
-
-    // =========================
-    // (D) 顶点（可选）
-    // =========================
-    if (s.showVertices) {
-        // 保留你原来的关键点策略 + 补齐样式字段
-        const topCenter = projectFn(x, y + h, z, config);
-        const bottomCenter = projectFn(x, y, z, config);
-
-        const keyPoints = [
-            { pt: topCenter, label: "top-center" },
-            { pt: bottomCenter, label: "bottom-center" },
-            { pt: topPts[0], label: "top-0" },
-            { pt: bottomPts[0], label: "bottom-0" }
-        ];
-
-        keyPoints.forEach(kp => {
-            const circle = document.createElementNS(SVG_NS, "circle");
-            circle.setAttribute("id", `${id}-vertex-${kp.label}`);
-            circle.setAttribute("cx", kp.pt.px);
-            circle.setAttribute("cy", kp.pt.py);
-            circle.setAttribute("r", s.vertexRadius);
-            circle.setAttribute("fill", s.vertexFill);
-            if (s.vertexOpacity != null) circle.setAttribute("fill-opacity", s.vertexOpacity);
-
-            if (s.vertexStroke && s.vertexStroke !== "none" && (s.vertexStrokeWidth || 0) > 0) {
-                circle.setAttribute("stroke", s.vertexStroke);
-                circle.setAttribute("stroke-width", s.vertexStrokeWidth);
-            } else {
-                circle.setAttribute("stroke", "none");
-            }
-            g.appendChild(circle);
-        });
-    }
-
-    const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
-    if (!svgTarget) throw new Error("drawCylinder: global svg not found.");
-    svgTarget.appendChild(g);
-    return g;
-}
-```
-
-#### 圆锥
-```javascript
-/**
- * 绘制圆锥体 (支持自定义投影策略)
- * 
- * @param {Object} config - 配置对象
- * @param {string} config.id - SVG 元素 ID 前缀
- * @param {number} config.x - 底面圆心 x 坐标 (3D)
- * @param {number} config.y - 底面圆心 y 坐标 (3D, 高度基准)
- * @param {number} config.z - 底面圆心 z 坐标 (3D, 深度)
- * @param {number} config.r - 底面半径
- * @param {number} config.h - 圆锥高度 (顶点坐标为 y+h)
- * @param {number} config.centerX - 画布中心点 X
- * @param {number} config.centerY - 画布中心点 Y
- * @param {Function} [config.projectFn=Projections.FRONT] - 投影函数（圆柱/圆锥默认 FRONT）
- * @param {Object} [config.styles] - 样式配置 (showVertices, faceFill 等)
- */
-function drawCone(config) {
-    const {
-        id,
-        x, y, z, r, h,
-        projectFn = Projections.FRONT,
-        styles = {},
-    } = config;
-
-    const s = { ...DEFAULT_STYLES, ...styles };
-    const segments = (typeof s.segments === "number" && s.segments >= 12) ? s.segments : 72;
-
-    // ---- 样式应用工具：可见/不可见边 ----
-    const applyVisibleStroke = (el) => {
-        el.setAttribute("stroke", s.edgeStroke);
-        el.setAttribute("stroke-width", s.edgeWidth);
-        if (s.edgeOpacity != null) el.setAttribute("stroke-opacity", s.edgeOpacity);
-        if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
-        if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-        if (s.edgeLinejoin === "miter" && s.edgeMiterlimit != null) {
-            el.setAttribute("stroke-miterlimit", s.edgeMiterlimit);
-        }
-    };
-
-    const applyHiddenStroke = (el) => {
-        const hs = (s.hiddenStroke != null) ? s.hiddenStroke : s.edgeStroke;
-        const hw = (s.hiddenWidth != null) ? s.hiddenWidth : s.edgeWidth;
-        const ho = (s.hiddenOpacity != null) ? s.hiddenOpacity : s.edgeOpacity;
-        const hd = (s.hiddenDashArray != null) ? s.hiddenDashArray : s.dashArray;
-
-        el.setAttribute("stroke", hs);
-        el.setAttribute("stroke-width", hw);
-        if (ho != null) el.setAttribute("stroke-opacity", ho);
-        if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
-        if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-        if (s.edgeLinejoin === "miter" && s.edgeMiterlimit != null) {
-            el.setAttribute("stroke-miterlimit", s.edgeMiterlimit);
-        }
-        if (hd) el.setAttribute("stroke-dasharray", hd);
-    };
-
-    const applyFaceFill = (el) => {
-        el.setAttribute("fill", s.faceFill);
-        if (s.faceOpacity != null) el.setAttribute("fill-opacity", s.faceOpacity);
-
-        if (s.faceStroke && s.faceStroke !== "none" && (s.faceStrokeWidth || 0) > 0) {
-            el.setAttribute("stroke", s.faceStroke);
-            el.setAttribute("stroke-width", s.faceStrokeWidth);
-            if (s.faceStrokeOpacity != null) el.setAttribute("stroke-opacity", s.faceStrokeOpacity);
-            if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
-            if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-        } else {
-            el.setAttribute("stroke", "none");
-        }
-    };
-
-    // 1) 顶点投影
-    const apex = projectFn(x, y + h, z, config);
-
-    // 2) 底面圆周点投影
-    const basePts = [];
-    for (let i = 0; i < segments; i++) {
-        const rad = (i / segments) * Math.PI * 2;
-        const dx = r * Math.cos(rad);
-        const dz = r * Math.sin(rad);
-        basePts.push(projectFn(x + dx, y, z + dz, config));
-    }
-
-    const g = document.createElementNS(SVG_NS, "g");
-    g.setAttribute("id", id);
-
-    // 3) 找底面轮廓切点（屏幕 X 最小/最大）
-    let minIdx = 0, maxIdx = 0;
-    basePts.forEach((p, i) => {
-        if (p.px < basePts[minIdx].px) minIdx = i;
-        if (p.px > basePts[maxIdx].px) maxIdx = i;
-    });
-
-    // 4) 弧线 d
-    const getArcD = (start, end) => {
-        let d = `M ${basePts[start].px},${basePts[start].py}`;
-        let i = start;
-        while (i !== end) {
-            i = (i + 1) % segments;
-            d += ` L ${basePts[i].px},${basePts[i].py}`;
-        }
-        return d;
-    };
-
-    // 5) 分前后弧（比较两段中点 py）
-    const midA = Math.floor((minIdx < maxIdx ? minIdx + maxIdx : minIdx + maxIdx + segments) / 2) % segments;
-    const midB = Math.floor((maxIdx < minIdx ? maxIdx + minIdx : maxIdx + minIdx + segments) / 2) % segments;
-
-    let frontStart, frontEnd, backStart, backEnd;
-    if (basePts[midA].py > basePts[midB].py) {
-        frontStart = minIdx; frontEnd = maxIdx;
-        backStart = maxIdx;  backEnd = minIdx;
-    } else {
-        frontStart = maxIdx; frontEnd = minIdx;
-        backStart = minIdx;  backEnd = maxIdx;
-    }
-
-    // =========================
-    // (A) 面：底面 + 主体（补齐 id）
-    // =========================
-
-    // A1) 底面 face（补齐：圆锥底面）
-    const baseFace = document.createElementNS(SVG_NS, "polygon");
-    baseFace.setAttribute("id", `${id}-base-face`);
-    baseFace.setAttribute("points", basePts.map(p => `${p.px},${p.py}`).join(" "));
-    applyFaceFill(baseFace);
-    g.appendChild(baseFace);
-
-    // A2) 主体 fill（补齐：以前没有 id）
-    if (s.faceFill && s.faceFill !== "none") {
-        const polyPts = [apex];
-        let curr = frontStart;
-        while (true) {
-            polyPts.push(basePts[curr]);
-            if (curr === frontEnd) break;
-            curr = (curr + 1) % segments;
-        }
-
-        const bodyFace = document.createElementNS(SVG_NS, "polygon");
-        bodyFace.setAttribute("id", `${id}-body-face`);
-        bodyFace.setAttribute("points", polyPts.map(p => `${p.px},${p.py}`).join(" "));
-        bodyFace.setAttribute("fill", s.faceFill);
-        if (s.faceOpacity != null) bodyFace.setAttribute("fill-opacity", s.faceOpacity);
-        bodyFace.setAttribute("stroke", "none");
-        g.appendChild(bodyFace);
-    }
-
-    // =========================
-    // (B) 边：底面后弧/前弧 + 两条母线
-    // =========================
-
-    // B1) 底面后弧（hidden）
-    const backPath = document.createElementNS(SVG_NS, "path");
-    backPath.setAttribute("id", `${id}-base-back`);
-    backPath.setAttribute("d", getArcD(backStart, backEnd));
-    backPath.setAttribute("fill", "none");
-    applyHiddenStroke(backPath);
-    g.appendChild(backPath);
-
-    // B2) 底面前弧（visible）
-    const frontPath = document.createElementNS(SVG_NS, "path");
-    frontPath.setAttribute("id", `${id}-base-front`);
-    frontPath.setAttribute("d", getArcD(frontStart, frontEnd));
-    frontPath.setAttribute("fill", "none");
-    applyVisibleStroke(frontPath);
-    g.appendChild(frontPath);
-
-    // B3) 两条侧面轮廓线（母线）
-    [minIdx, maxIdx].forEach((idx, i) => {
-        const line = document.createElementNS(SVG_NS, "line");
-        line.setAttribute("id", `${id}-side-${i}`);
-        line.setAttribute("x1", apex.px);        line.setAttribute("y1", apex.py);
-        line.setAttribute("x2", basePts[idx].px); line.setAttribute("y2", basePts[idx].py);
-        applyVisibleStroke(line);
-        g.appendChild(line);
-    });
-
-    // =========================
-    // (C) 顶点/中心轴/中心点（可选）——补齐 axis id
-    // =========================
-    if (s.showVertices) {
-        const baseCenter = projectFn(x, y, z, config);
-
-        const vertices = [
-            { p: apex, id: "apex" },
-            { p: baseCenter, id: "center" },
-            { p: basePts[frontStart], id: "tan1" },
-            { p: basePts[frontEnd], id: "tan2" }
-        ];
-
-        vertices.forEach(v => {
-            const circle = document.createElementNS(SVG_NS, "circle");
-            circle.setAttribute("id", `${id}-v-${v.id}`);
-            circle.setAttribute("cx", v.p.px);
-            circle.setAttribute("cy", v.p.py);
-            circle.setAttribute("r", s.vertexRadius);
-            circle.setAttribute("fill", s.vertexFill);
-            if (s.vertexOpacity != null) circle.setAttribute("fill-opacity", s.vertexOpacity);
-
-            if (s.vertexStroke && s.vertexStroke !== "none" && (s.vertexStrokeWidth || 0) > 0) {
-                circle.setAttribute("stroke", s.vertexStroke);
-                circle.setAttribute("stroke-width", s.vertexStrokeWidth);
-            } else {
-                circle.setAttribute("stroke", "none");
-            }
-            g.appendChild(circle);
-        });
-
-        // 中心轴线（补齐 id：axis）
-        const axis = document.createElementNS(SVG_NS, "line");
-        axis.setAttribute("id", `${id}-axis`);
-        axis.setAttribute("x1", baseCenter.px); axis.setAttribute("y1", baseCenter.py);
-        axis.setAttribute("x2", apex.px);       axis.setAttribute("y2", apex.py);
-        axis.setAttribute("fill", "none");
-        applyHiddenStroke(axis);
-        // 轴线通常更细一点：不破坏你的默认值，这里仅在未显式设置 hiddenWidth 时做轻微收敛
-        if (s.hiddenWidth == null) axis.setAttribute("stroke-width", 1);
-        // 轴线 dash 建议更密一些（若你想完全跟 hiddenDashArray 走，可删掉这两行）
-        // axis.setAttribute("stroke-dasharray", "3,3");
-        g.appendChild(axis);
-    }
-
-    // showCenters：给圆锥也加中心点（可选）
-    if (s.showCenters) {
-        const baseCenter = projectFn(x, y, z, config);
-
-        const mk = (pt, cid) => {
-            const c = document.createElementNS(SVG_NS, "circle");
-            c.setAttribute("id", cid);
-            c.setAttribute("cx", pt.px);
-            c.setAttribute("cy", pt.py);
-            c.setAttribute("r", s.centerRadius || 3);
-            c.setAttribute("fill", s.centerFill || "#e11d48");
-            c.setAttribute("opacity", 1);
-            return c;
-        };
-
-        g.appendChild(mk(baseCenter, `${id}-center-base`));
-        g.appendChild(mk(apex, `${id}-center-apex`));
-    }
-
-    const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
-    if (!svgTarget) throw new Error("drawCone: global svg not found.");
-    svgTarget.appendChild(g);
-    return g;
-}
-```
-
-#### 箭头
-```javascript
-/**
- * 绘制箭头（线段 + 三角箭头）
- * - 直接使用全局 svg（fallback window.mainSvg）
- * - 默认样式来自 DEFAULT_ANNOTATION_STYLES，可用 config.styles 覆盖
- *
- * @param {Object} config
- * @param {string} config.id - 唯一标识前缀
- * @param {number} config.x1,y1 - 起点
- * @param {number} config.x2,y2 - 终点（箭尖）
- * @param {number} [config.headLength] - 箭头长度（默认用 DEFAULT_ANNOTATION_STYLES.arrowSize 或 15）
- * @param {number} [config.headWidth] - 箭头底边宽（默认用 DEFAULT_ANNOTATION_STYLES.arrowWidth*2 或 10）
- * @param {Object} [config.styles] - 样式覆盖（基于 DEFAULT_ANNOTATION_STYLES）
- */
-function drawArrow(config) {
-    const {
-        id = "arrow",
-        x1 = 100, y1 = 100,
-        x2 = 300, y2 = 100,
-        headLength,
-        headWidth,
-        styles = {}
-    } = config;
-
-    const s = { ...DEFAULT_ANNOTATION_STYLES, ...styles };
-
-    // ---- 几何 ----
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const length = Math.sqrt(dx * dx + dy * dy);
-    if (length < 0.001) return null;
-
-    const ux = dx / length;
-    const uy = dy / length;
-
-    // 默认 head 参数：优先使用 config，其次用 DEFAULT_ANNOTATION_STYLES
-    const HL = (headLength != null) ? headLength : (s.arrowSize != null ? s.arrowSize : 15);
-    const HW = (headWidth  != null) ? headWidth  : (s.arrowWidth != null ? (s.arrowWidth * 2) : 10);
-
-    // 箭尖后退中心点
-    const backCX = x2 - HL * ux;
-    const backCY = y2 - HL * uy;
-
-    // 垂直向量（用于底边宽）
-    const vx = -uy;
-    const vy = ux;
-
-    const pLeftX = backCX + (HW / 2) * vx;
-    const pLeftY = backCY + (HW / 2) * vy;
-
-    const pRightX = backCX - (HW / 2) * vx;
-    const pRightY = backCY - (HW / 2) * vy;
-
-    const headPoints = `${x2},${y2} ${pLeftX},${pLeftY} ${pRightX},${pRightY}`;
-
-    // ---- 组 ----
-    const g = document.createElementNS(SVG_NS, "g");
-    g.setAttribute("id", id);
-
-    // ---- 箭身 ----
-    const shaft = document.createElementNS(SVG_NS, "line");
-    shaft.setAttribute("id", `${id}-shaft`);
-    shaft.setAttribute("x1", x1);
-    shaft.setAttribute("y1", y1);
-    shaft.setAttribute("x2", backCX);
-    shaft.setAttribute("y2", backCY);
-
-    shaft.setAttribute("stroke", s.stroke);
-    shaft.setAttribute("stroke-width", s.strokeWidth);
-    if (s.opacity != null) shaft.setAttribute("stroke-opacity", s.opacity);
-    if (s.linecap) shaft.setAttribute("stroke-linecap", s.linecap);
-    if (s.linejoin) shaft.setAttribute("stroke-linejoin", s.linejoin);
-
-    // dashArray：用于“箭身是否虚线”
-    // if (s.dashArray) shaft.setAttribute("stroke-dasharray", s.dashArray);
-
-    g.appendChild(shaft);
-
-    // ---- 箭头 ----
-    const head = document.createElementNS(SVG_NS, "polygon");
-    head.setAttribute("id", `${id}-head`);
-    head.setAttribute("points", headPoints);
-
-    // head 填充：用 s.fill；描边沿用 s.stroke（更统一）
-    head.setAttribute("fill", s.fill);
-    head.setAttribute("stroke", s.stroke);
-    head.setAttribute("stroke-width", Math.max(1, (s.strokeWidth || 1) * 0.6));
-    if (s.opacity != null) {
-        head.setAttribute("fill-opacity", s.opacity);
-        head.setAttribute("stroke-opacity", s.opacity);
-    }
-    if (s.linejoin) head.setAttribute("stroke-linejoin", s.linejoin);
-
-    g.appendChild(head);
-
-    const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
-    if (!svgTarget) throw new Error("drawArrow: global svg not found.");
-    svgTarget.appendChild(g);
-    return g;
-}
-```
-
-#### 尺寸标注
-
-##### 尺寸线标注
-```javascript
-/**
- * [通用工具] 绘制工程制图风格的尺寸线标注
- * 
- * 功能特性：
- * 1. 支持 3D 坐标自动投影。
- * 2. 去除间隙 (Gap)：延伸线直接从测量点 p1, p2 出发。
- * 3. 几何细节控制 (通过 styles 配置):
- *    - ext_length: 延伸线的总长度。尺寸线默认位于延伸线的 80% 位置，留出少量尾端。
- * 4. 文本自动对齐与避让支持。
- * 
- * 使用场景：长方体长宽高，正方体棱长，圆柱的高
- *
- * @param {object} config - 配置对象
- * @param {string} config.id - SVG组ID
- * @param {object} config.p1 - 起始点 3D坐标 {x,y,z}
- * @param {object} config.p2 - 结束点 3D坐标 {x,y,z}
- * @param {number} config.centerX - 画布中心点 X
- * @param {number} config.centerY - 画布中心点 Y
- * @param {string} config.direction - "上" | "下" | "左" | "右"
- * @param {string} config.text - 标注文本
- * @param {function} [config.projectFn] - 投影函数
- * @param {object} [config.styles] - 样式覆盖 { ext_length, arrowSize, ... }
- */
-function drawDimensionLine(config) {
-    const {
-        id,
-        p1,
-        p2,
-        direction,
-        text,
-        projectFn = Projections.OBLIQUE,
-        styles = {}
-    } = config;
-
-    const s = { ...DEFAULT_ANNOTATION_STYLES, ...styles };
-
-    const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
-    if (!svgTarget) throw new Error("drawDimensionLine: global svg not found.");
-
-    // 1) 投影
-    const pt1 = projectFn(p1.x, p1.y, p1.z, config);
-    const pt2 = projectFn(p2.x, p2.y, p2.z, config);
-
-    // 2) 向量计算
-    const dx = pt2.px - pt1.px;
-    const dy = pt2.py - pt1.py;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 0.001) return null;
-
-    const ux = dx / len; // 单位方向向量
-    const uy = dy / len;
-    const baseNx = -uy;  // 法向量
-    const baseNy = ux;
-
-    // 3) 方向判定
-    const dirVectors = {
-        "上": { x: 0,  y: -1 },
-        "下": { x: 0,  y:  1 },
-        "左": { x: -1, y:  0 },
-        "右": { x: 1,  y:  0 }
-    };
-    const target = dirVectors[direction] || dirVectors["上"];
-    const dot = baseNx * target.x + baseNy * target.y;
-    const dirSign = dot >= 0 ? 1 : -1;
-
-    const nx = baseNx * dirSign;
-    const ny = baseNy * dirSign;
-
-    // 4) 几何点计算
-    // extLen 为延伸线总长度
-    const extLen = s.ext_length ?? 25; 
-    // 尺寸线位置：设在延伸线的 80% 处，留出 20% 的出头（符合制图标准）
-    const dimPos = extLen * 0.8; 
-
-    const dimP1 = {
-        x: pt1.px + nx * dimPos,
-        y: pt1.py + ny * dimPos
-    };
-    const dimP2 = {
-        x: pt2.px + nx * dimPos,
-        y: pt2.py + ny * dimPos
-    };
-
-    // 延伸线起点紧贴 pt1, pt2
-    const ext1_Start = { x: pt1.px, y: pt1.py };
-    const ext1_End   = { x: pt1.px + nx * extLen, y: pt1.py + ny * extLen };
-    const ext2_Start = { x: pt2.px, y: pt2.py };
-    const ext2_End   = { x: pt2.px + nx * extLen, y: pt2.py + ny * extLen };
-
-    // 5) 创建组
-    const g = document.createElementNS(SVG_NS, "g");
-    g.setAttribute("id", id);
-    g.setAttribute("class", "annotation-group");
-
-    const applyStroke = (el) => {
-        el.setAttribute("stroke", s.stroke);
-        el.setAttribute("stroke-width", s.strokeWidth);
-        if (s.opacity != null) el.setAttribute("stroke-opacity", s.opacity);
-        if (s.linecap) el.setAttribute("stroke-linecap", s.linecap);
-        if (s.linejoin) el.setAttribute("stroke-linejoin", s.linejoin);
-        if (s.dashArray) el.setAttribute("stroke-dasharray", s.dashArray);
-    };
-
-    // 6) 绘制延伸线 (Extension Lines)
-    const elExt = document.createElementNS(SVG_NS, "path");
-    elExt.setAttribute("id", `${id}-ext`);
-    elExt.setAttribute(
-        "d",
-        `M ${ext1_Start.x},${ext1_Start.y} L ${ext1_End.x},${ext1_End.y} ` +
-        `M ${ext2_Start.x},${ext2_Start.y} L ${ext2_End.x},${ext2_End.y}`
-    );
-    elExt.setAttribute("fill", "none");
-    applyStroke(elExt);
-    g.appendChild(elExt);
-
-    // 7) 绘制主尺寸线 (Dimension Line)
-    const elDim = document.createElementNS(SVG_NS, "line");
-    elDim.setAttribute("id", `${id}-dim`);
-    elDim.setAttribute("x1", dimP1.x);
-    elDim.setAttribute("y1", dimP1.y);
-    elDim.setAttribute("x2", dimP2.x);
-    elDim.setAttribute("y2", dimP2.y);
-    applyStroke(elDim);
-    g.appendChild(elDim);
-
-    // 8) 绘制双箭头
-    const arrowSize = s.arrowSize ?? 8;
-    const arrowWidth = s.arrowWidth ?? 3;
-
-    const a1Tip = dimP1;
-    const a1Base = { x: dimP1.x + ux * arrowSize, y: dimP1.y + uy * arrowSize };
-    const a1Left = { x: a1Base.x + nx * arrowWidth, y: a1Base.y + ny * arrowWidth };
-    const a1Right= { x: a1Base.x - nx * arrowWidth, y: a1Base.y - ny * arrowWidth };
-
-    const a2Tip = dimP2;
-    const a2Base = { x: dimP2.x - ux * arrowSize, y: dimP2.y - uy * arrowSize };
-    const a2Left = { x: a2Base.x + nx * arrowWidth, y: a2Base.y + ny * arrowWidth };
-    const a2Right= { x: a2Base.x - nx * arrowWidth, y: a2Base.y - ny * arrowWidth };
-
-    const elArrows = document.createElementNS(SVG_NS, "path");
-    elArrows.setAttribute("id", `${id}-arrows`);
-    elArrows.setAttribute(
-        "d",
-        `M ${a1Tip.x},${a1Tip.y} L ${a1Left.x},${a1Left.y} L ${a1Right.x},${a1Right.y} Z ` +
-        `M ${a2Tip.x},${a2Tip.y} L ${a2Left.x},${a2Left.y} L ${a2Right.x},${a2Right.y} Z`
-    );
-    elArrows.setAttribute("fill", s.fill);
-    if (s.opacity != null) elArrows.setAttribute("fill-opacity", s.opacity);
-    g.appendChild(elArrows);
-
-    // 9) 绘制文本
-    const midX = (dimP1.x + dimP2.x) / 2;
-    const midY = (dimP1.y + dimP2.y) / 2;
-    const textOffset = s.textOffset ?? 10;
-
-    const textX = midX + nx * textOffset;
-    const textY = midY + ny * textOffset;
-
-    let anchor = "middle";
-    if (nx > 0.3) anchor = "start";
-    else if (nx < -0.3) anchor = "end";
-
-    const elText = document.createElementNS(SVG_NS, "text");
-    elText.setAttribute("id", `${id}-text`);
-    elText.setAttribute("x", textX);
-    elText.setAttribute("y", textY);
-    elText.setAttribute("text-anchor", anchor);
-    elText.setAttribute("dominant-baseline", "middle");
-    elText.setAttribute("font-size", s.fontSize);
-    elText.setAttribute("font-family", s.fontFamily);
-    elText.setAttribute("fill", s.textFill ?? s.fill);
-
-    // Halo 效果
-    elText.setAttribute("stroke", s.haloStroke || "white");
-    elText.setAttribute("stroke-width", s.haloWidth || 3);
-    elText.setAttribute("paint-order", "stroke");
-    elText.setAttribute("stroke-linejoin", "round");
-
-    elText.textContent = text;
-
-    // 智能避让相关元数据
-    elText.classList.add("smart-label");
-    elText.dataset.nx = nx;
-    elText.dataset.ny = ny;
-    elText.dataset.ux = ux;
-    elText.dataset.uy = uy;
-    elText.dataset.ox = textX;
-    elText.dataset.oy = textY;
-    elText.dataset.limit = (len / 2) - arrowSize - 5;
-    elText.dataset.parentId = id;
-
-    g.appendChild(elText);
-
-    // 挂载到画布
-    svgTarget.appendChild(g);
-
-    // 可选背景矩形
-    if (s.textBackground) {
-        const bb = elText.getBBox();
-        const pad = s.textBgPadding ?? 3;
-        const bg = document.createElementNS(SVG_NS, "rect");
-        bg.setAttribute("id", `${id}-text-bg`);
-        bg.setAttribute("x", bb.x - pad);
-        bg.setAttribute("y", bb.y - pad);
-        bg.setAttribute("width", bb.width + pad * 2);
-        bg.setAttribute("height", bb.height + pad * 2);
-        bg.setAttribute("rx", 2);
-        bg.setAttribute("ry", 2);
-        bg.setAttribute("fill", s.textBgFill ?? "white");
-        bg.setAttribute("fill-opacity", s.textBgOpacity ?? 1);
-        g.insertBefore(bg, elText);
-    }
-
-    return g;
-}
-```
-
-##### 花括号标注（废除，请勿使用）
-```javascript
-/**
- * [Type 2] 绘制花括号标记
- * 适用场景：汇总多段尺寸、总览标注
- */
-function drawCurlyBraceLabel(config) {
-    const {
-        id,
-        p1,
-        p2,
-        text,
-        direction,
-        projectFn = Projections.OBLIQUE,
-        styles = {}
-    } = config;
-
-    const s = { ...DEFAULT_ANNOTATION_STYLES, ...styles };
-
-    const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
-    if (!svgTarget) throw new Error("drawCurlyBraceLabel: global svg not found.");
-
-    // 1) 投影
-    const pt1 = projectFn(p1.x, p1.y, p1.z, config);
-    const pt2 = projectFn(p2.x, p2.y, p2.z, config);
-
-    // 2) 轴向 u
-    const dx = pt2.px - pt1.px;
-    const dy = pt2.py - pt1.py;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 0.001) return null;
-
-    const ux = dx / len;
-    const uy = dy / len;
-
-    // 3) 法向 n（带方向）
-    const baseNx = -uy;
-    const baseNy = ux;
-
-    const dirVectors = {
-        "上": { x: 0,  y: -1 },
-        "下": { x: 0,  y:  1 },
-        "左": { x: -1, y:  0 },
-        "右": { x: 1,  y:  0 }
-    };
-    const target = dirVectors[direction] || dirVectors["上"];
-    const dot = baseNx * target.x + baseNy * target.y;
-    const dirSign = dot >= 0 ? 1 : -1;
-
-    const nx = baseNx * dirSign;
-    const ny = baseNy * dirSign;
-
-    // 4) 参数
-    const braceGap = s.braceGap ?? 15;
-    let depth = s.braceDepth ?? 10;
-    let q = depth * 0.5;
-
-    // 线太短防打结
-    if (q * 4 > len) {
-        q = len / 4;
-        depth = q * 2;
-    }
-
-    // 5) 脚点（应用 gap）
-    const pStart = { x: pt1.px + nx * braceGap, y: pt1.py + ny * braceGap };
-    const pEnd   = { x: pt2.px + nx * braceGap, y: pt2.py + ny * braceGap };
-
-    const midX = (pStart.x + pEnd.x) / 2;
-    const midY = (pStart.y + pEnd.y) / 2;
-
-    const tip = { x: midX + nx * depth, y: midY + ny * depth };
-
-    const getPt = (baseX, baseY, uOff, nOff) => ({
-        x: baseX + ux * uOff + nx * nOff,
-        y: baseY + uy * uOff + ny * nOff
-    });
-
-    const pCorner1_Ctrl = getPt(pStart.x, pStart.y, 0, q);
-    const pCorner1_End  = getPt(pStart.x, pStart.y, q, q);
-
-    const pTip_Start    = getPt(midX, midY, -q, q);
-    const pTip_Ctrl     = getPt(midX, midY, 0, q);
-
-    const pTip_End      = getPt(midX, midY, q, q);
-    const pCorner2_Start= getPt(pEnd.x, pEnd.y, -q, q);
-    const pCorner2_Ctrl = getPt(pEnd.x, pEnd.y, 0, q);
-
-    const pathData =
-        `M ${pStart.x},${pStart.y} ` +
-        `Q ${pCorner1_Ctrl.x},${pCorner1_Ctrl.y} ${pCorner1_End.x},${pCorner1_End.y} ` +
-        `L ${pTip_Start.x},${pTip_Start.y} ` +
-        `Q ${pTip_Ctrl.x},${pTip_Ctrl.y} ${tip.x},${tip.y} ` +
-        `Q ${pTip_Ctrl.x},${pTip_Ctrl.y} ${pTip_End.x},${pTip_End.y} ` +
-        `L ${pCorner2_Start.x},${pCorner2_Start.y} ` +
-        `Q ${pCorner2_Ctrl.x},${pCorner2_Ctrl.y} ${pEnd.x},${pEnd.y}`;
-
-    const g = document.createElementNS(SVG_NS, "g");
-    g.setAttribute("id", id);
-
-    // 括号路径
-    const elPath = document.createElementNS(SVG_NS, "path");
-    elPath.setAttribute("id", `${id}-brace`);
-    elPath.setAttribute("d", pathData);
-    elPath.setAttribute("fill", "none");
-    elPath.setAttribute("stroke", s.stroke);
-    elPath.setAttribute("stroke-width", s.strokeWidth);
-    if (s.opacity != null) elPath.setAttribute("stroke-opacity", s.opacity);
-    if (s.linecap) elPath.setAttribute("stroke-linecap", s.linecap);
-    if (s.linejoin) elPath.setAttribute("stroke-linejoin", s.linejoin);
-    if (s.dashArray) elPath.setAttribute("stroke-dasharray", s.dashArray);
-    g.appendChild(elPath);
-
-    // 文本
-    const textOffset = s.textOffset ?? 13;
-    const textX = tip.x + nx * textOffset;
-    const textY = tip.y + ny * textOffset;
-
-    let anchor = "middle";
-    if (Math.abs(nx) > Math.abs(ny)) anchor = nx > 0 ? "start" : "end";
-
-    const elText = document.createElementNS(SVG_NS, "text");
-    elText.setAttribute("id", `${id}-text`);
-    elText.setAttribute("x", textX);
-    elText.setAttribute("y", textY);
-    elText.setAttribute("text-anchor", anchor);
-    elText.setAttribute("dominant-baseline", "middle");
-    elText.setAttribute("font-size", s.fontSize);
-    elText.setAttribute("font-family", s.fontFamily);
-    elText.setAttribute("fill", s.textFill ?? s.fill);
-
-    elText.setAttribute("stroke", s.haloStroke);
-    elText.setAttribute("stroke-width", s.haloWidth);
-    elText.setAttribute("paint-order", "stroke");
-    elText.setAttribute("stroke-linejoin", s.haloLinejoin || "round");
-
-    elText.textContent = text;
-    g.appendChild(elText);
-
-    svgTarget.appendChild(g);
-
-    // 可选文字背景
-    if (s.textBackground) {
-        const bb = elText.getBBox();
-        const pad = s.textBgPadding ?? 3;
-        const bg = document.createElementNS(SVG_NS, "rect");
-        bg.setAttribute("id", `${id}-text-bg`);
-        bg.setAttribute("x", bb.x - pad);
-        bg.setAttribute("y", bb.y - pad);
-        bg.setAttribute("width", bb.width + pad * 2);
-        bg.setAttribute("height", bb.height + pad * 2);
-        bg.setAttribute("rx", 2);
-        bg.setAttribute("ry", 2);
-        bg.setAttribute("fill", s.textBgFill ?? "white");
-        bg.setAttribute("fill-opacity", s.textBgOpacity ?? 1);
-        bg.setAttribute("stroke", "none");
-        g.insertBefore(bg, elText);
-    }
-
-    return g;
-}
-```
-
-##### 辅助线标注
-```javascript
-/**
- * [Type 3] 绘制原地/辅助线标记
- * 适用场景：半径(R)、直径(d)、圆锥的高等
- */
-function drawDirectLabel(config) {
-    const {
-        id,
-        p1,
-        p2,
-        text,
-        projectFn = Projections.OBLIQUE,
-        styles = {}
-    } = config;
-
-    const s = { ...DEFAULT_ANNOTATION_STYLES, ...styles };
-
-    const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
-    if (!svgTarget) throw new Error("drawDirectLabel: global svg not found.");
-
-    const pt1 = projectFn(p1.x, p1.y, p1.z, config);
-    const pt2 = projectFn(p2.x, p2.y, p2.z, config);
-
-    const dx = pt2.px - pt1.px;
-    const dy = pt2.py - pt1.py;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 0.001) return null;
-
-    const ux = dx / len;
-    const uy = dy / len;
-
-    // 法向（用于文字偏移，确保文字不压在线上）
-    const nx = -uy;
-    const ny = ux;
-
-    const g = document.createElementNS(SVG_NS, "g");
-    g.setAttribute("id", id);
-
-    // 1) 连接线
-    const line = document.createElementNS(SVG_NS, "line");
-    line.setAttribute("id", `${id}-line`);
-    line.setAttribute("x1", pt1.px);
-    line.setAttribute("y1", pt1.py);
-    line.setAttribute("x2", pt2.px);
-    line.setAttribute("y2", pt2.py);
-    line.setAttribute("stroke", s.stroke);
-    line.setAttribute("stroke-width", s.strokeWidth);
-    if (s.opacity != null) line.setAttribute("stroke-opacity", s.opacity);
-    if (s.linecap) line.setAttribute("stroke-linecap", s.linecap);
-    if (s.linejoin) line.setAttribute("stroke-linejoin", s.linejoin);
-
-    const dash = (s.directDashArray != null) ? s.directDashArray : s.dashArray;
-    if (dash) line.setAttribute("stroke-dasharray", dash);
-
-    g.appendChild(line);
-
-    // 2) 文本容器（用于整体偏移和旋转）
-    const midX = (pt1.px + pt2.px) / 2;
-    const midY = (pt1.py + pt2.py) / 2;
+### 默认样式配置及核心工具函数 (API 文档)
+
+**环境假设**：以下常量和函数已在全局作用域定义，**严禁在输出代码中重新定义或实现**。您的任务是根据以下文档编写**调用逻辑**。
+
+#### 1. 全局样式配置对象
+
+**`DEFAULT_STYLES` (几何体通用样式)**
+用于控制 `drawCuboid`, `drawCylinder`, `drawCone` 的外观。
+
+*   **可见边 (Visible Edges)**
+    *   `edgeStroke`: 线条颜色 (默认 `"#333"`)。
+    *   `edgeWidth`: 线条宽度 (默认 `2`)。
+    *   `edgeOpacity`: 线条透明度 (默认 `1`)。
+    *   `edgeLinecap`: 线端点样式 (`"round"`, `"butt"`, `"square"`)。
+    *   `edgeLinejoin`: 线连接点样式 (`"round"`, `"miter"`, `"bevel"`)。
+*   **不可见/隐藏边 (Hidden Edges)**
+    *   `hiddenDashArray`: 虚线模式 (默认 `"5,5"`, 即实线5px空5px)。
+    *   `hiddenStroke`: 颜色 (若为 `null`，自动跟随 `edgeStroke`)。
+    *   `hiddenWidth`: 宽度 (若为 `null`，自动跟随 `edgeWidth`)。
+    *   `hiddenOpacity`: 透明度 (建议设为 `0.6` 或 `0.5` 以增强空间透视感)。
+*   **面 (Faces)**
+    *   `faceFill`: 填充颜色 (默认 `"rgba(0,0,0,0)"` 即完全透明)。
+    *   `faceOpacity`: 面的整体透明度 (默认 `1`)。
+    *   `faceStroke`: 面的描边颜色 (默认 `"none"`，一般不描边，由 edge 负责)。
+*   **顶点 (Vertices)**
+    *   `showVertices`: 是否自动绘制顶点圆点 (默认 `false`)。
+    *   `vertexRadius`: 顶点半径 (默认 `4`)。
+    *   `vertexFill`: 顶点填充色 (默认 `"#333"`)。
+*   **几何精度与调试**
+    *   `segments`: 圆柱/圆锥底面的圆周分段数 (默认 `72`，值越大越平滑)。
+    *   `showCenters`: 是否显示几何体的几何中心点 (默认 `false`)。
+
+**`DEFAULT_ANNOTATION_STYLES` (标注通用样式)**
+用于控制 `drawArrow`, `drawDimensionLine`, `drawDirectLabel` 的外观。
+
+*   **线条与箭头**
+    *   `stroke`: 标注线颜色 (默认 `"#333"`)。
+    *   `strokeWidth`: 线宽 (默认 `1.5`)。
+    *   `arrowSize`: 箭头斜边长度 (默认 `8`)。
+    *   `arrowWidth`: 箭头底边宽度的一半 (默认 `3`)。
+*   **文本**
+    *   `fontSize`: 字号 (默认 `14`)。
+    *   `fontFamily`: 字体 (默认 `"Arial, sans-serif"`)。
+    *   `textFill`: 文字颜色 (默认 `"#333"`)。
+    *   `haloStroke`: 文字外发光描边颜色 (默认 `"white"`，用于防止文字压线时看不清)。
+    *   `haloWidth`: 外发光宽度 (默认 `3`)。
+*   **文本背景框 (Text Background)**
+    *   `textBackground`: 是否启用矩形背景 (默认 `false`)。
+    *   `textBgFill`: 背景色 (默认 `"white"`)。
+    *   `textBgOpacity`: 背景透明度 (默认 `1`)。
+    *   `textBgPadding`: 背景内边距 (默认 `3`)。
+*   **专用参数**
+    *   `ext_length`: 尺寸线延伸线的总长度 (默认 `25`)。
+    *   `gap`: 延伸线起点与测量点的留白间距 (默认 `5`)。
+    *   `textOffset`: 文字距离线条的偏移量 (默认 `10`)。
+
+#### 2. 投影函数 `Projections`
+
+**功能说明**：将三维空间坐标 $(x, y, z)$ 转换为二维 SVG 屏幕坐标 $(px, py)$。
+
+*   **`Projections.OBLIQUE(x, y, z, config)` (斜二测)**
+    *   **适用场景**：正方体、长方体、棱柱以及由它们组成的组合体。
+    *   **实现逻辑**：
+        *   $px = centerX + x + z \cdot k \cdot \cos(angle)$
+        *   $py = centerY - (y + z \cdot k \cdot \sin(angle))$
+    *   **Config 参数**：
+        *   `centerX`, `centerY`: 画布中心。
+        *   `k`: 深度缩放系数 (默认 `0.5`)。
+        *   `angle`: 斜二测角度 (默认 `Math.PI/4` 即 45度)。
+
+*   **`Projections.FRONT(x, y, z, config)` (正视图+深度叠加)**
+    *   **适用场景**：圆柱体、圆锥体、球体。让底面圆在视觉上呈现水平扁平的椭圆，符合小学数学教材的制图习惯。
+    *   **实现逻辑**：
+        *   $px = centerX + x$ (X轴无透视偏移)
+        *   $py = centerY - (y + z \cdot k)$ (Z轴深度直接叠加到高度上，表现为“近低远高”)
+    *   **Config 参数**：
+        *   `centerX`, `centerY`: 画布中心。
+        *   `k`: 深度缩放系数 (默认 `0.3` 或 `0.5`)。
+
+#### 3. 绘制长方体 `drawCuboid(config)`
+
+*   **功能说明**：绘制长方体或正方体，自动计算面的法向量与可视性，正确处理虚实线遮挡关系。
+*   **使用场景**：正方体、长方体、容器、长方体切割等。
+*   **详细参数说明**：
+    *   `id` (String, **必填**): SVG 组元素的唯一 ID 前缀。
+    *   `x, y, z` (Number): **左下前**顶点的 3D 坐标 (即 Vertex 0 的位置)。
+    *   `w` (Number): 宽度 (X轴方向长度)。
+    *   `h` (Number): 高度 (Y轴方向长度)。
+    *   `d` (Number): 深度 (Z轴方向长度)。
+    *   `centerX, centerY` (Number): 画布中心点。
+    *   `projectFn` (Function): 投影函数 (建议使用 `Projections.OBLIQUE`)。
+    *   `styles` (Object): 覆盖 `DEFAULT_STYLES` 的配置。
+
+*   **返回元素 ID 及含义 (ID Mapping)**
     
-    // 计算偏移量：根据字号自动计算一个合适的间距，或者从 styles 中读取
-    const offsetDist = s.textOffset ?? (parseInt(s.fontSize) * 0.8 || 10); 
-    
-    // 计算旋转角度
-    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    // 确保文字永远是正向的（不倒立）
-    if (angle > 90 || angle < -90) {
-        angle += 180;
-    }
+    **1. 面 (Faces)**
+    *   `${id}-face-front` : 前表面 ($z=0$)
+    *   `${id}-face-back`  : 后表面 ($z=d$)
+    *   `${id}-face-right` : 右表面 ($x=w$)
+    *   `${id}-face-left`  : 左表面 ($x=0$)
+    *   `${id}-face-top`   : 上表面 ($y=h$)
+    *   `${id}-face-bottom`: 下表面 ($y=0$)
 
-    // 创建一个子组来放置文字及其背景，方便统一变换
-    const textGroup = document.createElementNS(SVG_NS, "g");
-    // 将文字平移到中点，再沿法线偏移，最后旋转
-    const tx = midX + nx * offsetDist;
-    const ty = midY + ny * offsetDist;
-    textGroup.setAttribute("transform", `translate(${tx}, ${ty}) rotate(${angle})`);
+    **2. 顶点 (Vertices) - 索引 0~7**
+    *(用于定位点，例如 p = drawCuboid 内部计算的 vertices[2])*
+    *   **前表面 ($z=0$)**:
+        *   `${id}-vertex-0`: **左下前** (基准点 x, y, z)
+        *   `${id}-vertex-1`: **右下前** (x+w, y, z)
+        *   `${id}-vertex-2`: **右上前** (x+w, y+h, z)
+        *   `${id}-vertex-3`: **左上前** (x, y+h, z)
+    *   **后表面 ($z=d$)**:
+        *   `${id}-vertex-4`: **左下后** (x, y, z+d)
+        *   `${id}-vertex-5`: **右下后** (x+w, y, z+d)
+        *   `${id}-vertex-6`: **右上后** (x+w, y+h, z+d)
+        *   `${id}-vertex-7`: **左上后** (x, y+h, z+d)
 
-    const elText = document.createElementNS(SVG_NS, "text");
-    elText.setAttribute("id", `${id}-text`);
-    // 此时坐标设为 0,0，因为变换已经在 group 上处理了
-    elText.setAttribute("x", 0);
-    elText.setAttribute("y", 0);
-    elText.setAttribute("text-anchor", "middle");
-    elText.setAttribute("dominant-baseline", "middle");
-    elText.setAttribute("font-size", s.fontSize);
-    elText.setAttribute("font-family", s.fontFamily);
-    elText.setAttribute("fill", s.textFill ?? s.fill);
+    **3. 边线 (Edges) - 索引 0~11**
+    *(用于高亮特定棱，例如高亮棱长)*
+    *   **前表面边框**:
+        *   `${id}-edge-0`: **前下棱** (连接 0-1)
+        *   `${id}-edge-1`: **前右棱** (连接 1-2)
+        *   `${id}-edge-2`: **前上棱** (连接 2-3)
+        *   `${id}-edge-3`: **前左棱** (连接 3-0)
+    *   **后表面边框**:
+        *   `${id}-edge-4`: **后下棱** (连接 4-5)
+        *   `${id}-edge-5`: **后右棱** (连接 5-6)
+        *   `${id}-edge-6`: **后上棱** (连接 6-7)
+        *   `${id}-edge-7`: **后左棱** (连接 7-4)
+    *   **纵深连接棱 (前后连接)**:
+        *   `${id}-edge-8`:  **左下深** (连接 0-4)
+        *   `${id}-edge-9`:  **右下深** (连接 1-5)
+        *   `${id}-edge-10`: **右上深** (连接 2-6)
+        *   `${id}-edge-11`: **左上深** (连接 3-7)
 
-    // Halo 效果
-    elText.setAttribute("stroke", s.haloStroke || "none");
-    elText.setAttribute("stroke-width", Math.max(s.haloWidth ?? 3, 4));
-    elText.setAttribute("paint-order", "stroke");
-    elText.setAttribute("stroke-linejoin", s.haloLinejoin || "round");
+    **4. 其他**
+    *   `${id}-center`: 几何体中心点。
 
-    elText.textContent = text;
-    textGroup.appendChild(elText);
-    g.appendChild(textGroup);
+#### 4. 绘制圆柱体 `drawCylinder(config)`
 
-    svgTarget.appendChild(g);
+*   **功能说明**：绘制圆柱体，包含底面、顶面、侧面填充及侧面轮廓线。
+*   **使用场景**：圆柱、圆柱形容器、溢出的水杯等。
+*   **详细参数说明**：
+    *   `id` (String, **必填**): 唯一 ID 前缀。
+    *   `x, y, z` (Number): **底面圆心**的 3D 坐标。
+    *   `r` (Number): 圆柱半径。
+    *   `h` (Number): 圆柱高度。
+    *   `centerX, centerY` (Number): 画布中心。
+    *   `projectFn` (Function): 投影函数 (强烈建议使用 `Projections.FRONT`)。
+    *   `styles` (Object): 覆盖配置 (如 `segments: 72` 控制平滑度)。
+*   **返回元素 ID 及含义**：
+    *   **组**: `${id}`
+    *   **面**:
+        *   `${id}-bottom-face`: 底面圆形区域。
+        *   `${id}-top-face`: 顶面圆形区域。
+        *   `${id}-side-face`: 侧面矩形投影区域 (用于整体高亮)。
+    *   **边**:
+        *   `${id}-bottom-front`: 底面可见的前半圆弧 (实线)。
+        *   `${id}-bottom-back`: 底面被遮挡的后半圆弧 (虚线)。
+        *   `${id}-side-0`, `${id}-side-1`: 左右两条侧面轮廓线 (母线)。
+    *   **调试点**: `${id}-center-bottom`, `${id}-center-top`。
 
-    // 3) 可选文字背景
-    if (s.textBackground) {
-        const bb = elText.getBBox();
-        const pad = s.textBgPadding ?? 3;
-        const bg = document.createElementNS(SVG_NS, "rect");
-        bg.setAttribute("id", `${id}-text-bg`);
-        // 背景框相对于文字居中
-        bg.setAttribute("x", bb.x - pad);
-        bg.setAttribute("y", bb.y - pad);
-        bg.setAttribute("width", bb.width + pad * 2);
-        bg.setAttribute("height", bb.height + pad * 2);
-        bg.setAttribute("rx", 2);
-        bg.setAttribute("ry", 2);
-        bg.setAttribute("fill", s.textBgFill ?? "white");
-        bg.setAttribute("fill-opacity", s.textBgOpacity ?? 1);
-        bg.setAttribute("stroke", "none");
-        // 插入到文字前面
-        textGroup.insertBefore(bg, elText);
-    }
+#### 5. 绘制圆锥体 `drawCone(config)`
 
-    return g;
-}
-```
+*   **功能说明**：绘制圆锥体，包含底面圆、侧面填充及两条母线。
+*   **使用场景**：圆锥、漏斗、旋转体等。
+*   **详细参数说明**：
+    *   `id` (String, **必填**): 唯一 ID 前缀。
+    *   `x, y, z` (Number): **底面圆心**的 3D 坐标。
+    *   `r` (Number): 底面半径。
+    *   `h` (Number): 圆锥高度 (顶点坐标自动计算为 $y+h$)。
+    *   `centerX, centerY` (Number): 画布中心。
+    *   `projectFn` (Function): 投影函数 (强烈建议使用 `Projections.FRONT`)。
+    *   `styles` (Object): 覆盖配置。
+*   **返回元素 ID 及含义**：
+    *   **组**: `${id}`
+    *   **面**:
+        *   `${id}-base-face`: 底面圆形区域。
+        *   `${id}-body-face`: 侧面三角形投影区域 (用于高亮主体)。
+    *   **边**:
+        *   `${id}-base-front`: 底面前半弧 (实线)。
+        *   `${id}-base-back`: 底面后半弧 (虚线)。
+        *   `${id}-side-0`, `${id}-side-1`: 两侧母线。
+    *   **关键点**:
+        *   `${id}-v-apex`: 顶点。
+        *   `${id}-v-center`: 底面圆心。
+    *   **轴**: `${id}-axis`: 顶点到底面圆心的高线 (默认为虚线)。
+
+#### 6. 绘制箭头 `drawArrow(config)`
+
+*   **功能说明**：绘制二维或三维投影后的直线箭头。
+*   **使用场景**：指示运动方向、标注切割位置、指引视线。
+*   **实现方法**：基于两点坐标计算方向向量，绘制直线杆身 (Shaft) 和三角形箭周 (Head)。
+*   **详细参数说明**：
+    *   `id` (String, **必填**)。
+    *   `x1, y1` (Number): 起点 SVG 屏幕坐标。
+    *   `x2, y2` (Number): 终点 SVG 屏幕坐标 (箭头指向端)。
+    *   `headLength` (Number): 箭头三角形的长度 (优先级高于 styles.arrowSize)。
+    *   `headWidth` (Number): 箭头三角形底宽 (优先级高于 styles.arrowWidth)。
+    *   `styles` (Object): 覆盖 `DEFAULT_ANNOTATION_STYLES`。
+*   **返回元素 ID 及含义**：
+    *   **组**: `${id}`
+    *   **部件**: `${id}-shaft` (箭身 line), `${id}-head` (箭头 polygon)。
+
+#### 7. 绘制尺寸线标注 `drawDimensionLine(config)`
+
+*   **功能说明**：绘制工程制图风格的尺寸标注（两条垂直延伸线 + 一条双向箭头线 + 居中文字）。
+*   **使用场景**：标注长方体的长宽高、棱长、圆柱的高、水深等外部尺寸。
+*   **详细参数说明**：
+    *   `id` (String, **必填**)。
+    *   `p1`, `p2` (Object {x, y, z}): **3D 测量起止点**。函数会自动投影这两个点。
+    *   `centerX`, `centerY` (Number): 画布中心。
+    *   `direction` (String): `"上" | "下" | "左" | "右"`。
+        *   决定延伸线向哪个方向延伸，以及文字相对于线的偏移方向。
+        *   例如：标注底部水平边，direction选 "下"。
+    *   `text` (String): 显示的文本 (如 "8cm")。
+    *   `projectFn` (Function): 投影函数 (必须与被标注物体的投影方式一致)。
+    *   `styles` (Object):
+        *   `ext_length`: 延伸线总长 (默认 25)。
+        *   `gap`: 延伸线起点与测量点的间距 (默认 5，避免贴在物体上)。
+        *   `textOffset`: 文字偏移量。
+*   **返回元素 ID 及含义**：
+    *   **组**: `${id}` (带有 class="annotation-group")
+    *   **部件**:
+        *   `${id}-ext`: 两条延伸线路径 (path)。
+        *   `${id}-dim`: 主尺寸线 (line)。
+        *   `${id}-arrows`: 双向箭头 (path)。
+        *   `${id}-text`: 标注文本 (text)。
+
+#### 8. 绘制辅助线标注 `drawDirectLabel(config)`
+
+*   **功能说明**：绘制一条连接线（通常为虚线）并附带文字，文字可根据线段斜率自动旋转。
+*   **使用场景**：标注圆柱/圆锥的半径(r)、内部高(h)、或者在物体内部无法使用延伸线的场景。
+*   **详细参数说明**：
+    *   `id` (String, **必填**)。
+    *   `p1`, `p2` (Object {x, y, z}): **3D 连接线端点** (如圆心到边缘)。
+    *   `text` (String): 标注文本。
+    *   `centerX`, `centerY` (Number): 画布中心。
+    *   `projectFn` (Function): 投影函数。
+    *   `styles` (Object):
+        *   `directDashArray`: 虚线样式 (默认 "4,4")。
+        *   `textOffset`: 文字沿法向的偏移距离 (控制文字离线有多远)。
+        *   `textBackground`: `true` 表示给文字加白色背景遮罩，防止文字与虚线重叠。
+*   **返回元素 ID 及含义**：
+    *   **组**: `${id}`
+    *   **部件**: `${id}-line` (连接线 line), `${id}-text` (文本 text)。
+
+#### 9. 自动防重叠 `autoAvoidOverlap(svgRoot)`
+
+*   **功能说明**：算法会自动检测带有 `.smart-label` 类名（`drawDimensionLine` 生成的文本自带此类）的文本元素，如果它们遮挡了通过 `path`, `line`, `polygon` 绘制的几何图形，会自动尝试向四周微调位置。
+*   **使用场景**：通常不需要手动调用。但在步骤非常复杂、标注极多的情况下，可以在 Step 脚本的末尾显式调用一次 `autoAvoidOverlap(window.mainSvg)` 以确保文字清晰可见。
 
 ### 常见画法
 
-#### 标记周长，面积，体积等量
+#### 标记周长、面积、体积等整体量
 
-使用SVG的<text>元素，示例如下
+必须使用SVG的<text>元素，不得使用尺寸线标注，也不得使用辅助线标注
 
-```javascript
-drawCylinder({
-    id: "cup",
-    x: 0, y: 0, z: 0,
-    r: r_cyl, h: h_cup,
-    ...config,
-    styles: {
-        faceFill: "rgba(255,255,255,0.1)", // 玻璃微透
-        edgeStroke: "#333",
-        edgeWidth: 2
-    }
-});
+#### 标记长方体长宽高、正方体棱长、圆柱体高
 
-// 4. 标注底面周长 C=50cm
-const pTextPos = proj(r_cyl, 0, -r_cyl, { centerX: cx, centerY: cy });   // 文字起始位置 (稍微偏离圆心)
+必须使用尺寸线标注
 
-// 4.3 绘制文字
-const areaText = document.createElementNS(SVG_NS, "text");
-areaText.setAttribute("id", "area-text-marker");
-areaText.setAttribute("x", pTextPos.px + 20);
-areaText.setAttribute("y", pTextPos.py);
-areaText.setAttribute("font-size", "16");
-areaText.setAttribute("font-family", "Arial, sans-serif");
-areaText.setAttribute("fill", "#333");
-areaText.setAttribute("text-anchor", "start"); 
-areaText.textContent = "C=50cm";
-svg.appendChild(areaText);
-```
+#### 标注圆柱圆锥的半径、直径、圆锥的高
+
+必须使用辅助线标注
 
 #### 标记
 ### 实现模版 (Template)
@@ -2588,6 +993,243 @@ textV.setAttribute("stroke-width", "3");
 textV.setAttribute("paint-order", "stroke");
 textV.textContent = "V=96cm³";
 svg.appendChild(textV);
+</script>
+```
+
+# 示例输入
+## 试题
+一个直角三角形,两条直角边分别是3厘米、4厘米,一条斜边是5厘米。将此三角形以4厘米为轴旋转一周,得到一个立体图形,这个立体图形的体积是
+ $\underline{立方厘米}$ 。
+
+## 讲解脚本
+<JSON>{"idx":1,"step":"审题","type":"语气引导","cont":"同学你好，今天我们要解决一道关于立体图形旋转求体积的题目。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":2,"step":"审题","type":"审题","cont":"先看题干：一个直角三角形，两条直角边分别是三厘米、四厘米，一条斜边是五厘米。","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"一个<mark>直角三角形</mark>,两条直角边分别是<mark>3厘米、4厘米</mark>","voice_cont":"一个<mark>直角三角形</mark>，两条直角边分别是<mark>三厘米、四厘米</mark>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":3,"step":"审题","type":"审题","cont":"将此三角形以四厘米为轴旋转一周，得到一个立体图形，","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"line","mark_cont":"以<mark>4厘米为轴</mark>旋转一周","voice_cont":"以<mark>四厘米为轴</mark>旋转一周"}],"visual_guide":""}</JSON>
+<JSON>{"idx":4,"step":"审题","type":"审题","cont":"求这个立体图形的体积是多少立方厘米。","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"highlight","mark_cont":"这个立体图形的<mark>体积</mark>","voice_cont":"这个立体图形的<mark>体积</mark>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":5,"step":"思路引导","type":"语气引导","cont":"要想算出体积，首先我们得知道旋转出来的这个立体图形到底是什么形状。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":6,"step":"思路引导","type":"分析","cont":"我们先把这个直角三角形画出来，直角边分别是三厘米和四厘米。","display_cont":"","mark_cont":[],"visual_guide":"在画布左侧画一个直角三角形，竖直的直角边较长。使用尺寸线标注竖直直角边“4厘米”，水平直角边“3厘米”，斜边“5厘米”。"}</JSON>
+<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"当直角三角形绕着一条直角边旋转一周时，它扫过的轨迹会形成一个圆锥。","display_cont":"【导图】旋转后形状→圆锥","mark_cont":[],"visual_guide":"在直角三角形的竖直直角边（4厘米边）上画一个旋转箭头符号。在三角形右侧展示一个半透明的圆锥体，圆锥的高对应三角形的竖直边，底面半径对应三角形的水平边。"}</JSON>
+<JSON>{"idx":8,"step":"步骤讲解","type":"语气引导","cont":"形状确定了，接下来我们分两步来解答。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":9,"step":"步骤讲解","type":"步骤名称","cont":"第一步，确定圆锥的底面半径和高。","display_cont":"<b>1. 确定半径和高</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":10,"step":"步骤讲解","type":"分析","cont":"题目说以四厘米为轴旋转。这个旋转轴，其实就是圆锥的高。","display_cont":"$高=4$（厘米）","mark_cont":[],"visual_guide":"高亮圆锥内部的中心轴线（高），并标注“h=4厘米”"}</JSON>
+<JSON>{"idx":11,"step":"步骤讲解","type":"分析","cont":"而另一条直角边三厘米，就是圆锥底面的半径。","display_cont":"$底面半径=3$（厘米）","mark_cont":[],"visual_guide":"高亮圆锥底面的半径线段，并标注“r=3厘米”"}</JSON>
+<JSON>{"idx":12,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"根据题意，圆锥的底面半径(r)和高(h)分别是多少？","options":{"r=3厘米，h=4厘米":"正确","r=4厘米，h=3厘米":"错误","r=3厘米，h=5厘米":"错误","r=5厘米，h=4厘米":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":13,"step":"步骤讲解","type":"语气引导","cont":"找准了半径和高，计算就不会出错了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":14,"step":"步骤讲解","type":"步骤名称","cont":"第二步，根据公式计算圆锥的体积。","display_cont":"<b>2. 计算圆锥体积</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":15,"step":"步骤讲解","type":"公式说明","cont":"圆锥的体积等于三分之一乘底面积乘高，也就是三分之一乘圆周率乘半径的平方再乘高。","display_cont":"$V=\\frac{1}{3}Sh=\\frac{1}{3}\\pi r^{2}h$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":16,"step":"步骤讲解","type":"计算","cont":"我们将数据代入公式：三分之一乘三点一四，乘半径三的平方，再乘高四。","display_cont":"$V=\\frac{1}{3}\\times3.14\\times3^{2}\\times4$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":17,"step":"步骤讲解","type":"计算","cont":"计算的时候要注意运算顺序，三的平方是九；九乘三分之一等于三；三乘四等于十二。","display_cont":"$=3.14\\times3\\times4\\n=3.14\\times12$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":18,"step":"步骤讲解","type":"计算","cont":"最后，三点一四乘十二，结果是三十七点六八立方厘米。","display_cont":"$=37.68$（立方厘米）","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":19,"step":"答案","type":"答案讲解","cont":"所以，这个立体图形的体积是三十七点六八立方厘米。","display_cont":"37.68","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":20,"step":"总结","type":"总结讲解","cont":"这道题的关键在于：直角三角形绕直角边旋转成圆锥时，作为轴的那条边是高，另一条直角边是底面半径。计算时千万别忘了乘三分之一。","display_cont":"<b>解题关键：</b>\\n1. 旋转轴 = 圆锥的高\\n2. 另一条直角边 = 底面半径\\n3. $V=\\frac{1}{3}\\pi r^{2}h$","mark_cont":[],"visual_guide":""}</JSON>
+
+# 示例输出
+【使用的JS函数】
+```json
+[
+    "drawCone",
+    "drawDimensionLine",
+    "drawDirectLabel"
+]
+```
+
+【每一步的输出】
+
+```html
+<script id="script_step_6">
+// ==========================================
+// Step 6: 绘制直角三角形及初始布局
+// ==========================================
+
+// 1. 定义全局布局常量
+const CX_LEFT = 320;   // 三角形区域中心 (垂直直角边所在X)
+const CX_RIGHT = 720;  // 圆锥区域中心
+const CY = 420;        // 地面基准线
+const SCALE = 50;      // 缩放比例: 1cm = 50px
+
+// 几何参数
+const H_TRI = 4 * SCALE; // 垂直直角边 (高)
+const R_TRI = 3 * SCALE; // 水平直角边 (底)
+
+// 2. 绘制直角三角形 (Triangle)
+// 设定直角顶点在 (CX_LEFT, CY)
+const p_bottom_center = { x: CX_LEFT, y: CY };           // 直角顶点
+const p_top_center    = { x: CX_LEFT, y: CY - H_TRI };   // 顶部顶点
+const p_outer         = { x: CX_LEFT + R_TRI, y: CY };   // 外侧顶点
+
+const triGroup = document.createElementNS(SVG_NS, "g");
+triGroup.setAttribute("id", "triangle-group");
+
+// 2.1 三角形主体
+const triPath = document.createElementNS(SVG_NS, "path");
+triPath.setAttribute("id", "tri-shape");
+triPath.setAttribute("d", `M ${p_bottom_center.x},${p_bottom_center.y} L ${p_outer.x},${p_outer.y} L ${p_top_center.x},${p_top_center.y} Z`);
+triPath.setAttribute("fill", "rgba(147, 197, 253, 0.5)"); // 浅蓝填充
+triPath.setAttribute("stroke", "#3b82f6");                // 蓝色边框
+triPath.setAttribute("stroke-width", "3");
+triPath.setAttribute("stroke-linejoin", "round");
+triGroup.appendChild(triPath);
+
+// 2.2 直角符号
+const size = 20;
+const rightAngleMark = document.createElementNS(SVG_NS, "path");
+rightAngleMark.setAttribute("d", `M ${p_bottom_center.x + size},${p_bottom_center.y} L ${p_bottom_center.x + size},${p_bottom_center.y - size} L ${p_bottom_center.x},${p_bottom_center.y - size}`);
+rightAngleMark.setAttribute("fill", "none");
+rightAngleMark.setAttribute("stroke", "#3b82f6");
+rightAngleMark.setAttribute("stroke-width", "2");
+triGroup.appendChild(rightAngleMark);
+
+svg.appendChild(triGroup);
+
+// 3. 尺寸标注 (Triangle Dimensions)
+
+// 3.1 垂直直角边 (4cm)
+drawDimensionLine({
+    id: "dim-tri-h",
+    p1: { x: CX_LEFT, y: CY - H_TRI, z: 0 },
+    p2: { x: CX_LEFT, y: CY, z: 0 },
+    direction: "左",
+    text: "4cm",
+    centerX: 0, centerY: 0, 
+    projectFn: (x, y) => ({ px: x, py: y }),
+    styles: { textOffset: 15, ext_length: 10 }
+});
+
+// 3.2 水平直角边 (3cm)
+drawDimensionLine({
+    id: "dim-tri-r",
+    p1: { x: CX_LEFT, y: CY, z: 0 },
+    p2: { x: CX_LEFT + R_TRI, y: CY, z: 0 },
+    direction: "下",
+    text: "3cm",
+    centerX: 0, centerY: 0,
+    projectFn: (x, y) => ({ px: x, py: y }),
+    styles: { textOffset: 15, ext_length: 10 }
+});
+
+// 3.3 斜边 (5cm)
+drawDimensionLine({
+    id: "dim-tri-hyp",
+    p1: { x: CX_LEFT + R_TRI, y: CY, z: 0 },
+    p2: { x: CX_LEFT, y: CY - H_TRI, z: 0 },
+    direction: "右",
+    text: "5cm",
+    centerX: 0, centerY: 0,
+    projectFn: (x, y) => ({ px: x, py: y }),
+    styles: { textOffset: 10, ext_length: 10 }
+});
+</script>
+
+<script id="script_step_7">
+// ==========================================
+// Step 7: 绘制无箭头旋转圆弧与圆锥体
+// ==========================================
+
+// 1. 旋转圆弧 (Rotation Arc - No Arrow)
+const arrowGroup = document.createElementNS(SVG_NS, "g");
+arrowGroup.setAttribute("id", "rotation-arc-simple");
+
+// 绘制紧凑的椭圆弧
+const ax = CX_LEFT;         // 轴心X
+const ay = CY - H_TRI / 2;  // 轴心Y (垂直边中点)
+const rx = 15;              // 半径
+const ry = 6;               // 扁度
+
+// 计算路径点：从左后方出来，绕过前方，到右后方
+// t从 0.85PI 到 2.15PI，顺时针
+const t1 = Math.PI * 0.85; 
+const x1 = ax + rx * Math.cos(t1);
+const y1 = ay + ry * Math.sin(t1);
+
+const t2 = Math.PI * 2.15;
+const x2 = ax + rx * Math.cos(t2);
+const y2 = ay + ry * Math.sin(t2);
+
+const arcPath = document.createElementNS(SVG_NS, "path");
+arcPath.setAttribute("d", `
+    M ${x1},${y1}
+    A ${rx} ${ry} 0 1 1 ${x2},${y2}
+`);
+
+arcPath.setAttribute("fill", "none");
+arcPath.setAttribute("stroke", "#e11d48");
+arcPath.setAttribute("stroke-width", "2");
+arcPath.setAttribute("stroke-linecap", "round");
+// 移除 marker-end，仅显示红线弧
+arrowGroup.appendChild(arcPath);
+
+svg.appendChild(arrowGroup);
+
+// 2. 绘制右侧圆锥 (Cone)
+drawCone({
+    id: "cone-main",
+    x: 0, y: 0, z: 0, 
+    r: R_TRI, 
+    h: H_TRI,
+    centerX: CX_RIGHT, centerY: CY, 
+    projectFn: Projections.FRONT,
+    styles: {
+        faceFill: "rgba(253, 186, 116, 0.3)", // 橙色半透
+        edgeStroke: "#f97316",
+        edgeWidth: 2,
+        hiddenStroke: "#f97316",
+        hiddenOpacity: 0.3,
+        showVertices: false,
+        showCenters: false
+    }
+});
+</script>
+
+<script id="script_step_10">
+// ==========================================
+// Step 10: 确定圆锥的高 (h=4cm)
+// 方式：使用 drawDirectLabel 直接绘制虚线辅助线和文字
+// ==========================================
+
+drawDirectLabel({
+    id: "label-cone-h",
+    p1: { x: 0, y: 0, z: 0 },     // 底面中心
+    p2: { x: 0, y: H_TRI, z: 0 }, // 顶点
+    text: "h=4cm",
+    centerX: CX_RIGHT, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        fontSize: 16,
+        stroke: "#dc2626",        // 红色线条
+        strokeWidth: 2.5,
+        directDashArray: "6,4",   // 虚线样式
+        textFill: "#dc2626",      // 红色文字
+        haloStroke: "white",
+        haloWidth: 4,
+        textOffset: 12            // 文字稍微偏离轴线
+    }
+});
+</script>
+
+<script id="script_step_11">
+// ==========================================
+// Step 11: 确定圆锥底面半径 (r=3cm)
+// 方式：使用 drawDirectLabel 直接绘制虚线辅助线和文字
+// ==========================================
+
+drawDirectLabel({
+    id: "label-cone-r",
+    p1: { x: 0, y: 0, z: 0 },     // 圆心
+    p2: { x: R_TRI, y: 0, z: 0 }, // 右侧边缘
+    text: "r=3cm",
+    centerX: CX_RIGHT, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        fontSize: 16,
+        stroke: "#dc2626",        // 红色线条
+        strokeWidth: 2.5,
+        directDashArray: "6,4",   // 虚线样式
+        textFill: "#dc2626",      // 红色文字
+        haloStroke: "white",
+        haloWidth: 4,
+        textOffset: 15            // 文字向上偏移
+    }
+});
 </script>
 ```
 

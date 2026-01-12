@@ -1822,25 +1822,25 @@
 
             svgTarget.appendChild(g);
 
-            // 3) 可选文字背景
-            if (s.textBackground) {
-                const bb = elText.getBBox();
-                const pad = s.textBgPadding ?? 3;
-                const bg = document.createElementNS(SVG_NS, "rect");
-                bg.setAttribute("id", `${id}-text-bg`);
-                // 背景框相对于文字居中
-                bg.setAttribute("x", bb.x - pad);
-                bg.setAttribute("y", bb.y - pad);
-                bg.setAttribute("width", bb.width + pad * 2);
-                bg.setAttribute("height", bb.height + pad * 2);
-                bg.setAttribute("rx", 2);
-                bg.setAttribute("ry", 2);
-                bg.setAttribute("fill", s.textBgFill ?? "white");
-                bg.setAttribute("fill-opacity", s.textBgOpacity ?? 1);
-                bg.setAttribute("stroke", "none");
-                // 插入到文字前面
-                textGroup.insertBefore(bg, elText);
-            }
+            // // 3) 可选文字背景
+            // if (s.textBackground) {
+            //     const bb = elText.getBBox();
+            //     const pad = s.textBgPadding ?? 3;
+            //     const bg = document.createElementNS(SVG_NS, "rect");
+            //     bg.setAttribute("id", `${id}-text-bg`);
+            //     // 背景框相对于文字居中
+            //     bg.setAttribute("x", bb.x - pad);
+            //     bg.setAttribute("y", bb.y - pad);
+            //     bg.setAttribute("width", bb.width + pad * 2);
+            //     bg.setAttribute("height", bb.height + pad * 2);
+            //     bg.setAttribute("rx", 2);
+            //     bg.setAttribute("ry", 2);
+            //     bg.setAttribute("fill", s.textBgFill ?? "white");
+            //     bg.setAttribute("fill-opacity", s.textBgOpacity ?? 1);
+            //     bg.setAttribute("stroke", "none");
+            //     // 插入到文字前面
+            //     textGroup.insertBefore(bg, elText);
+            // }
 
             return g;
         }

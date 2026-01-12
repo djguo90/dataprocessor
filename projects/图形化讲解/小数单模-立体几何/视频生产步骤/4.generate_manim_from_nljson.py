@@ -57,7 +57,7 @@ except Exception as exc:  # pragma: no cover
 # ------- 可配置变量（放在最前，便于手工调整；均可被命令行覆盖） -------
 SOURCE_JSON_PATH = Path(
     # r"/mnt/pan8T/temp_yhzou6/数学图形化讲解/files_yhzou/标注数据补充_1225/补充数据_data_1225_一二阶段融合1_matched_1133.jsonl"
-    r"/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/4.manim可处理格式/小数单模-立体几何_试标_manim可处理格式_part001_pv2_matched_195.json"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式/小数单模-立体几何_试标_manim可处理格式_part001_pv3_matched_196.json"
 )
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v5-prompt测试\svg-stage2-2d-gemini-v5_100_matched_98.json")
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3.5-平台标注500题-fixed-20251204\svg-stage2-2d-gemini-v3.5_500_matched_489.json")
@@ -71,10 +71,10 @@ SOURCE_JSON_PATH = Path(
 
 
 QUESTION_BANK_PATH = Path(
-    r"/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/4.manim可处理格式/小数单模-立体几何_试标_manim可处理格式_part001_pv2_matched_195.json"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式/小数单模-立体几何_试标_manim可处理格式_part001_pv3_matched_196.json"
 )
 OUTPUT_ROOT = Path(
-    r"/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/5.视频结果/小数单模-立体几何_试标_视频前处理_part001_pv2_matched_195"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果/小数单模-立体几何_试标_manim可处理格式_part001_pv3_matched_196"
 )
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3-平台试标100题\code-test")
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3-平台试标100题\code")

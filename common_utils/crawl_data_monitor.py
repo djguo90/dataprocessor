@@ -7,7 +7,7 @@ import time
 USERNAME = "郭冬杰"
 PASSWORD = "wy7TMap3"
 TASKS = [
-    "资源教育部-辅学-图形化讲解_141_gemini-3-pro-preview-thinking_郭冬杰_1768200126779-小数单模-立体几何_试标_phase1爬取输入_part001_pv3"
+    "资源教育部-辅学-图形化讲解_148_gemini-3-pro-preview-thinking_郭冬杰_1768206403308-小数单模-立体几何_试标_phase2爬取输入_part001_pv3"
 ]
 SLEEP = 10 * 60
 

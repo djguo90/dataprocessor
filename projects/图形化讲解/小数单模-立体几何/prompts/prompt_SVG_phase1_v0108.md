@@ -242,7 +242,7 @@ voice_cont|str|对应的口播片段，使用“<mark>口播片段</mark>”符�
 
 ### 1. 核心定位：只做“画图/高亮/结构呈现”，不做“总结/结论上屏”
 
-`visual_guide` 仅用于描述图形区需要执行的**绘制**与**高亮**操作，例如：画点、画线、画图形、画辅助线、连接、延长、涂色、高亮等。
+`visual_guide` 仅用于描述图形区需要执行的**绘制**与**高亮**操作，例如：画点、画线、画图形、画辅助线、连接、延长、涂色、高亮、标注等。
 **严禁**在 `visual_guide` 中出现任何**总结性文字内容**，尤其包括但不限于：
 
 * 周长、面积、表面积、侧面积、体积等**整体量**的结果表达（例如“周长C=……”“面积S=……”“体积V=……”）。
@@ -304,7 +304,7 @@ voice_cont|str|对应的口播片段，使用“<mark>口播片段</mark>”符�
 
 ### 7.2 示例（标注文本写法示例）
 
-* 尺寸线标注长度（纯文本也可，但若含变量建议公式化）：
+* 标注长度（纯文本也可，但若含变量建议公式化）：
 
   * 纯文本：`5cm`
   * 含变量：`\(AB=5\text{ cm}\)`
@@ -318,60 +318,12 @@ voice_cont|str|对应的口播片段，使用“<mark>口播片段</mark>”符�
 
   * `\(\pi r^2\)`（仅当题干已给出该表达且你允许其作为“已知条件呈现”，否则不要在图里写）
 
-## 8. 标注类型约束（只能三选一，且必须按规则选用）
-
-`visual_guide` 中的“标注”只能属于以下三类之一：
-
-### 8.1 尺寸线标注（贴在“已存在的线段”上）
-
-**定义：**用于标注图形中**已经存在、清晰可指代的直线线段**的长度（例如多边形边、长方体棱、已画出的高线段等）。
-
-**使用规则：**
-
-* 当“要表达的长度”对应图中**现成的一条直线边/棱/线段**时，必须使用尺寸线标注。
-
-**强制使用对象**
-* **长方体 长、宽、高**
-* **正方体棱长**
-* **圆柱高**
-
-**示例句式：**
-
-* “使用尺寸线标注线段AB的长度‘5cm’。”
-* “使用尺寸线标注长方体棱AB的长度‘8dm’。”
-
-### 8.2 辅助线标注（先画代表长度的辅助线，再标注）
-
-**定义：**用于标注图形中**本体轮廓上并不存在的长度**，必须先画出一条“代表该长度的辅助线段”（通常灰色虚线），再对该辅助线段进行标注。
-
-**强制适用对象：**
-
-* **半径 r**：必须先画“从圆心到圆周”的半径线段，再标注 `r=...`。
-* **直径 d**：必须先画“过圆心连接圆周两点”的直径线段，再标注 `d=...`。
-* **圆锥 h**: 必须先画“从顶点到地面圆心”的高线段，再标注`h=...`。
-
-**示例句式：**
-
-* “画一条灰色虚线作为半径（从圆心O到圆周点P），并标注‘r=3dm’。”
-* “画一条灰色虚线作为直径（过圆心O连接圆周两点），并标注‘d=6dm’。”
-* “画一条灰色虚线作为圆锥的高，并标注‘h=10dm’。”
-
-### 8.3 纯文字标注（仅用于必要信息）
-
-**定义：**仅用于**点位名称**或**题目直接给出的角度等必要信息**（用于看图识别）。
-**禁止用途：**不得用于周长/面积/体积等整体量，也不得用于任何计算结果。
-
-**示例句式：**
-
-* “在三个顶点旁分别纯文字标注‘A’‘B’‘C’。”
-* “在角ABC附近纯文字标注‘60°’。”
-
-### 9. 几何纯净性（禁止画符号“伪造关系”）
+### 8. 几何纯净性（禁止画符号“伪造关系”）
 
 * 禁止用画箭头/短斜线/小方块去“伪造”平行、相等、垂直等符号。
 * 只能通过**高亮相关边/角**来暗示关系。
 
-### 10. 复杂场景分步呈现
+### 9. 复杂场景分步呈现
 
 * 切割、拼接、旋转、展开等不要一张图塞满过程，应描述最终静态结果：
 
@@ -417,7 +369,7 @@ voice_cont|str|对应的口播片段，使用“<mark>口播片段</mark>”符�
 <JSON>{"idx":3,"step":"审题","type":"审题","cont":"切成两个大小相同的长方体，","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"切成2个<mark>大小相同</mark>的长方体表面积","voice_cont":"切成两个<mark>大小相同</mark>的长方体"}],"visual_guide":""}</JSON>
 <JSON>{"idx":4,"step":"审题","type":"审题","cont":"表面积增加一百二十八平方分米，这个说法对吗？","display_cont":"<b>判断：</b>表面积增加128平方分米是否正确？","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"highlight","mark_cont":"<mark>表面积增加\n128平方分米</mark>()","voice_cont":"<mark>表面积增加一百二十八平方分米</mark>"}],"visual_guide":""}</JSON>
 <JSON>{"idx":5,"step":"思路引导","type":"语气引导","cont":"那怎么判断呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":6,"step":"思路引导","type":"分析","cont":"为了看得更清楚，我们先根据题意画出示意图。","display_cont":"","mark_cont":[],"visual_guide":"画一个正方体。使用尺寸线标注底边棱长“8分米”。在正方体延高方向的中心画淡红色透明切割面（四条边用淡红色虚线）。正方体右侧上下并列画两个完全一样的分离长方体，中间留出间隙。"}></JSON>
+<JSON>{"idx":6,"step":"思路引导","type":"分析","cont":"为了看得更清楚，我们先根据题意画出示意图。","display_cont":"","mark_cont":[],"visual_guide":"画一个正方体。在底边棱长上标注“8分米”。在正方体延高方向的中心画淡红色透明切割面（四条边用淡红色虚线）。正方体右侧上下并列画两个完全一样的分离长方体，中间留出间隙。"}></JSON>
 <JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"正方体切成两个长方体后，会新增切面，所以咱们只需要算出新增切面的总面积，就能判断对错啦。","display_cont":"【导图】增加的表面积→新增切面的总面积","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":8,"step":"步骤讲解","type":"语气引导","cont":"接下来咱们一步步计算。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":9,"step":"步骤讲解","type":"步骤名称","cont":"首先观察新增切面的形状。","display_cont":"<b>观察新增切面的形状：</b>","mark_cont":[],"visual_guide":""}</JSON>
@@ -426,7 +378,7 @@ voice_cont|str|对应的口播片段，使用“<mark>口播片段</mark>”符�
 <JSON>{"idx":12,"step":"步骤讲解","type":"语气引导","cont":"好，切面的形状咱们确定好啦。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":13,"step":"步骤讲解","type":"步骤名称","cont":"接下来计算单个切面的面积。","display_cont":"<b>计算单个切面的面积：</b>","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":14,"step":"步骤讲解","type":"公式说明","cont":"正方形的面积等于边长乘以边长。","display_cont":"正方形面积：$面积=边长\\times边长$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":15,"step":"步骤讲解","type":"分析","cont":"观察右侧长方体可知，新增正方形切面的边长等于原正方体棱长八分米。","display_cont":"","mark_cont":[],"visual_guide":"在右侧两个长方体的新增正方形切面右侧，分别使用尺寸线标注边长“8分米”。"}></JSON>
+<JSON>{"idx":15,"step":"步骤讲解","type":"分析","cont":"观察右侧长方体可知，新增正方形切面的边长等于原正方体棱长八分米。","display_cont":"","mark_cont":[],"visual_guide":"在右侧两个长方体的新增正方形切面右侧，分别标注边长“8分米”。"}></JSON>
 <JSON>{"idx":16,"step":"步骤讲解","type":"计算","cont":"八乘以八等于六十四平方分米，所以单个切面的面积是六十四平方分米。","display_cont":"$单个切面面积=8\\times8=64$（平方分米）","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":17,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"根据计算结果，单个切面的面积是多少？","options":{"8平方分米":"错误","16平方分米":"错误","64平方分米":"正确","128平方分米":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":18,"step":"步骤讲解","type":"语气引导","cont":"单个切面的面积算出来啦。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
@@ -450,13 +402,13 @@ voice_cont|str|对应的口播片段，使用“<mark>口播片段</mark>”符�
 <JSON>{"idx":4,"step":"审题","type":"审题","cont":"把一个物体放入后，物体完全浸没在水中，从容器里溢出了四十五毫升水。","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"line","mark_cont":"物体<mark>完全浸没</mark>在水中","voice_cont":"物体<mark>完全浸没</mark>在水中"},{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"溢出<mark>45mL</mark>水","voice_cont":"溢出了<mark>四十五毫升</mark>水"}],"visual_guide":""}</JSON>
 <JSON>{"idx":5,"step":"审题","type":"审题","cont":"题目问：这个物体的体积是多少立方厘米呢？","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"highlight","mark_cont":"<mark>这个物体的体积是多少立方厘米</mark>?","voice_cont":"<mark>这个物体的体积是多少立方厘米</mark>呢"}],"visual_guide":""}</JSON>
 <JSON>{"idx":6,"step":"思路引导","type":"语气引导","cont":"我们怎么求这个物体的体积呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"为了看得更清楚，咱们先把放置物体前后的图画出来。","display_cont":"","mark_cont":[],"visual_guide":"画一个正方体容器，底边使用尺寸线标注棱长“8cm”。容器内部用半透明蓝色填充到水面高度；使用尺寸线标注水深“6.5cm”。在右侧画一个同样的容器，内部水域填充到顶面；容器内底部画一个完全浸没的浅棕色半透明物体。容器外侧画一小杯溢出的水。"}></JSON>
+<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"为了看得更清楚，咱们先把放置物体前后的图画出来。","display_cont":"","mark_cont":[],"visual_guide":"画一个正方体容器，在底边上标注棱长“8cm”。容器内部用半透明蓝色填充到水面高度；在水深处标注“6.5cm”。在右侧画一个同样的容器，内部水域填充到顶面；容器内底部画一个完全浸没的浅棕色半透明物体。容器外侧画一小杯溢出的水。"}></JSON>
 <JSON>{"idx":8,"step":"思路引导","type":"分析","cont":"根据排水法原理，物体完全浸没在水中时，它的体积就等于它排开的水的体积。这部分水去哪了呢？一部分让容器里的水面上升了，另一部分溢出到了外面。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":9,"step":"思路引导","type":"分析","cont":"所以，物体的体积就等于“上升的水的体积”加上“溢出的水的体积”，也就是图中高亮的部分。","display_cont":"$物体体积=排开水的体积=上升水的体积+溢出水的体积$","mark_cont":[],"visual_guide":"以透明红色高亮容器内从6.5cm到8cm之间的新增水体部分，同时以透明红色高亮容器外溢出的水"}</JSON>
 <JSON>{"idx":10,"step":"步骤讲解","type":"语气引导","cont":"思路理清了，咱们开始一步步计算。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":11,"step":"步骤讲解","type":"步骤名称","cont":"第一步，先算出容器里水面上升了多少。","display_cont":"<b>计算容器内上升水的体积</b>","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":12,"step":"步骤讲解","type":"分析","cont":"容器棱长是八厘米，原来水深六点五厘米，水面上升到满，高度上升了多少呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":13,"step":"步骤讲解","type":"计算","cont":"用八减去六点五等于一点五厘米。","display_cont":"上升高度：$8-6.5=1.5\\mathrm{cm}$","mark_cont":[],"visual_guide":"在容器侧面使用尺寸线标注从6.5cm到8cm这段距离，标注“1.5cm”"}</JSON>
+<JSON>{"idx":13,"step":"步骤讲解","type":"计算","cont":"用八减去六点五等于一点五厘米。","display_cont":"上升高度：$8-6.5=1.5\\mathrm{cm}$","mark_cont":[],"visual_guide":"在容器侧面标注从6.5cm到8cm这段距离为“1.5cm”"}</JSON>
 <JSON>{"idx":14,"step":"步骤讲解","type":"分析","cont":"这部分上升的水是长方体形状，底面积就是正方体的底面积。","display_cont":"","mark_cont":[],"visual_guide":"高亮容器的底面正方形"}</JSON>
 <JSON>{"idx":15,"step":"步骤讲解","type":"公式说明","cont":"正方体底面积等于棱长乘棱长。","display_cont":"$底面积=棱长\\times棱长$","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":16,"step":"步骤讲解","type":"计算","cont":"底面积是八乘八等于六十四平方厘米。","display_cont":"底面积：$8\\times8=64\\mathrm{cm}^2$","mark_cont":[],"visual_guide":""}></JSON>
@@ -501,7 +453,7 @@ voice_cont|str|对应的口播片段，使用“<mark>口播片段</mark>”符�
 <JSON>{"idx":2,"step":"审题","type":"审题","cont":"来看题干：一个圆柱的底面直径和高都是六分米，","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"一个圆柱的底面直径和高都是<mark> $6$ 分米</mark>","voice_cont":"底面直径和高都是<mark>六分米</mark>"}],"visual_guide":""}</JSON>
 <JSON>{"idx":3,"step":"审题","type":"审题","cont":"我们需要分别求出这个圆柱的侧面积、表面积、体积，以及和它等底等高的圆锥的体积。","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"highlight","mark_cont":"<mark>侧面积</mark>是____, <mark>表面积</mark>是____, <mark>体积</mark>是____, 和它<mark>等底等高的圆锥的体积</mark>是____","voice_cont":"<mark>侧面积</mark>、<mark>表面积</mark>、<mark>体积</mark>，以及和它<mark>等底等高的圆锥的体积</mark>"}],"visual_guide":""}</JSON>
 <JSON>{"idx":4,"step":"思路引导","type":"语气引导","cont":"这道题其实就是考查咱们对公式的熟练程度，咱们把相关的公式梳理一下。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":5,"step":"思路引导","type":"思维导图节点","cont":"首先，圆柱的侧面积等于底面周长乘以高。","display_cont":"【导图】圆柱侧面积→底面周长×高","mark_cont":[],"visual_guide":"在画布左侧画一个圆柱。在底面圆上画一条穿过圆心的直径辅助线，并标注直径“6分米”。在圆柱右侧使用尺寸线标注圆柱的高“6分米”。高亮圆柱的侧面。"}></JSON>
+<JSON>{"idx":5,"step":"思路引导","type":"思维导图节点","cont":"首先，圆柱的侧面积等于底面周长乘以高。","display_cont":"【导图】圆柱侧面积→底面周长×高","mark_cont":[],"visual_guide":"在画布左侧画一个圆柱。在底面圆上画一条穿过圆心的直径辅助线，并标注直径“6分米”。在圆柱右侧标注圆柱的高“6分米”。高亮圆柱的侧面。"}></JSON>
 <JSON>{"idx":6,"step":"思路引导","type":"思维导图节点","cont":"其次，圆柱的表面积等于侧面积加上两个底面的面积。","display_cont":"→圆柱表面积→侧面积+2×底面积","mark_cont":[],"visual_guide":"高亮圆柱的上下两个底面"}</JSON>
 <JSON>{"idx":7,"step":"思路引导","type":"思维导图节点","cont":"接着，圆柱的体积等于底面积乘以高。","display_cont":"→圆柱体积→底面积×高","mark_cont":[],"visual_guide":"将圆柱整体填充为半透明蓝色"}</JSON>
 <JSON>{"idx":8,"step":"思路引导","type":"思维导图节点","cont":"最后，求等底等高的圆锥体积，只要记住它等于圆柱体积的三分之一。","display_cont":"→圆锥体积→1/3×圆柱体积","mark_cont":[],"visual_guide":"在画布右侧画一个与左侧圆柱等底等高的圆锥。在圆锥底面画一条穿过圆心的直径辅助线，并标注直径“6分米”。在圆锥内部画一条竖直虚线作为高，并标注高“6分米”。"}></JSON>
