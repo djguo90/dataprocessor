@@ -3,14 +3,14 @@ today=$(date +%Y%m%d)
 MODE="offline"
 LEVEL="junior"
 DATA_SUB_DIR="SingleJunior"
-EXEC_DIR="/mnt/pan8T/temp_xsji4/DataManagement"
+EXEC_DIR="/mnt/pan8T/temp_djguo/dataprocessor/projects/数学刷库/预置问题拒识代码"
 DATA_DIR="${EXEC_DIR}/data/${MODE}/${DATA_SUB_DIR}"
 LOG_DIR="${EXEC_DIR}/logs/${MODE}/${DATA_SUB_DIR}"
 if [[ ! -d "${LOG_DIR}" ]]; then
     mkdir -p ${LOG_DIR}
 fi
 
-FOR_TEST=true
+FOR_TEST=false
 
 # STEP="extract"
 # STEP="preprocess"
@@ -51,17 +51,20 @@ elif [[ "${STEP}" == "request" ]]; then
     fi
     RENAME_PREFIX="资源教育部-辅学offline_${today}_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_"
 elif [[ "${STEP}" == "response" ]]; then
-     INPUT_DIR="${DATA_DIR}/${STEP}/jsonl"
-    SAVE_DIR="${DATA_DIR}/${STEP}/answer"
+    METRICS_FILE="/mnt/pan8T/temp_djguo/存量库清洗-初中单模/正式批次/初中单模视频预置问题爬取输出/logs/test_metrics_1.json"
+    LOG_FILE="/mnt/pan8T/temp_djguo/存量库清洗-初中单模/正式批次/初中单模视频预置问题爬取输出/logs/llll.log"
+    INPUT_DIR="/mnt/pan8T/temp_djguo/存量库清洗-初中单模/正式批次/初中单模视频预置问题爬取输出"
+    SAVE_DIR="/mnt/pan8T/temp_djguo/存量库清洗-初中单模/正式批次/初中单模视频预置问题爬取处理"
 elif [[ "${STEP}" == "merge" ]]; then
     INPUT_DIR="${DATA_DIR}/extract/test"
     RESULT_DIR="${DATA_DIR}/response/answer/test"
     SAVE_DIR="${DATA_DIR}/update/test"
 elif [[ "${STEP}" == "update" ]]; then
-    INPUT_DIR="${DATA_DIR}/update/test/random_9832.json"
-    SAVE_DIR="${DATA_DIR}/update/test/random_9832_result.json"
-    QUESTION_FILE="/mnt/pan8T/temp_jiahe3/results/junior/random_1w/jun_random_9832_check_latex_html.json"
-    STATE_FILE="${DATA_DIR}/_test_extract_state_is_null.json"
+    INPUT_DIR="/mnt/pan8T/temp_jiahe3/datas_jun_offline/raw/3kw/datas"
+    SAVE_DIR="/mnt/pan8T/temp_djguo/存量库清洗-初中单模/正式批次/初中单模视频预置问题处理结果"
+    RESULT_DIR="/mnt/pan8T/temp_djguo/存量库清洗-初中单模/正式批次/初中单模视频预置问题爬取处理"
+    QUESTION_FILE="/mnt/pan8T/temp_djguo/shuaku/junior_3kw"
+    STATE_FILE="/mnt/pan8T/temp_xsji4/DataManagement/data/offline/SingleJunior/_extract_state_is_null.json"
 fi
 
 show_help() {

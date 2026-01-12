@@ -403,7 +403,50 @@ def extract_junior_from_offline(line):
 
 
 def update_junior_to_offline(line, questions):
-    raise NotImplementedError
+    def _expand_result_questions(items):
+        questions = {}
+        for idx, q in items.items():
+            key = idx.split("#")[-1]
+            questions[key] = q
+        return questions
+
+    try: 
+        preset_question = json.loads(line["preset_question"][0]["presetQuestion"])["scienceStruct"] # 小学多模冲刷
+        # preset_question = line["guidLearnStruct"]["presetQuestion"]["scienceStruct"]["scienceStruct"]
+    except Exception as e:
+        preset_question = None
+        operate_type = "same"
+        line = {
+            "topic_id": line["topic_id"],
+            "preset_question_operate_type": operate_type,
+            "preset_question_version": "filter_preset_question_1113"
+        }
+        return line
+
+    if questions:
+        
+        questions = _expand_result_questions(questions)
+        if len(questions) != len(preset_question):
+            operate_type = "update"
+        else:
+            operate_type = "same"
+    else:
+        operate_type = "null"      
+    if operate_type == "same":
+        line = {
+            "topic_id": line["topic_id"],
+            "preset_question_operate_type": operate_type,
+            "preset_question_version": "filter_preset_question_1113"
+        }
+    else:
+        line = {
+            "topic_id": line["topic_id"],
+            "preset_question_operate_type": operate_type,
+            "preset_question_version": "filter_preset_question_1113",
+            "preset_question": {"scienceStruct": questions, "ttsUrl": None}      
+        }
+
+    return line
 
 
 def extract_primary_from_close(line):
@@ -1202,7 +1245,8 @@ class PresetQuestionManager:
             # metrics = self.merge_input_and_result(filepath, save_file, result_file)
             metrics = self.merge_preset_question(filepath, save_file)
         elif self.step == "update":
-            metrics = self.update_preset_question(filepath, save_file, result_file, reflash=True)
+            # metrics = self.update_preset_question(filepath, save_file, result_file, reflash=True)
+            metrics = self.update_preset_question(filepath, save_file, result_file, reflash=False)
         else:
             raise ValueError(f"未知步骤：{self.step}")
 
@@ -1508,16 +1552,16 @@ def client():
             line_count = manager.add_prefix_to_filenames(args.save_dir, args.rename_prefix)
             logger.info(f"重命名完成，共处理{line_count}行数据")
     elif args.step == "response":
-        delete_zip=False
-        delete_failed=True
-        target_directory = os.path.dirname(args.input_dir)
-        flag = batch_unzip(target_directory, delete_zip, delete_failed, extract_dir=f"{target_directory}/jsonl", prefix_pattern=r"资源教育部.+?1114攻关_")
-        if not flag:
-            logger.error("解压失败，退出程序")
-            return
+        # delete_zip=False
+        # delete_failed=True
+        # target_directory = os.path.dirname(args.input_dir)
+        # flag = batch_unzip(target_directory, delete_zip, delete_failed, extract_dir=f"{target_directory}/jsonl", prefix_pattern=r"资源教育部.+?1114攻关_")
+        # if not flag:
+        #     logger.error("解压失败，退出程序")
+        #     return
 
-        if not delete_zip:
-            move_files(target_directory, f"{target_directory}/zip", file_type=".zip")
+        # if not delete_zip:
+        #     move_files(target_directory, f"{target_directory}/zip", file_type=".zip")
         manager.process_directory(args.input_dir, args.save_dir)
     elif args.step == "update":
         if args.state_file:
@@ -1526,11 +1570,11 @@ def client():
         if args.question_file:
             manager.get_script_null_state(args.question_file)
 
-        if os.path.isfile(args.input_dir):
-            os.makedirs(os.path.dirname(args.save_dir), exist_ok=True)
-            manager.update_preset_question(args.input_dir, args.save_dir, args.result_dir)
-        else:
-            manager.process_directory(args.input_dir, args.save_dir, args.result_dir)
+        # if os.path.isfile(args.input_dir):
+        #     os.makedirs(os.path.dirname(args.save_dir), exist_ok=True)
+        #     manager.update_preset_question(args.input_dir, args.save_dir, args.result_dir)
+        # else:
+        manager.process_directory(args.input_dir, args.save_dir, args.result_dir)
     elif args.step == "merge":
         manager.load_new_result(args.result_dir)
         manager.process_directory(args.input_dir, args.save_dir)

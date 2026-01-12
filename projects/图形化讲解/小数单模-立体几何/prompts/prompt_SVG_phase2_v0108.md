@@ -13,13 +13,13 @@ xxxxx
 
 # 输出规范 (Output Specification)
 
-**严厉禁止**：在阶段二输出中，**绝对不要**重新输出或定义 `drawCuboid`, `drawCylinder` 等工具函数。默认这些函数已经存在于环境中。你只需要输出调用这些函数的逻辑代码。
+**严厉禁止**：在阶段二输出中，**绝对不要**重新输出或定义 `drawCuboid`, `drawCylinder` 等工具函数。默认这些函数已经存在于环境中。你只需要输出调用这些函数的逻辑代码，并且优先使用默认参数。
 
 ## 输出格式遵循以下样例:
 【使用的JS函数】
 ```json
 [
-    "xxx"（只需要给出函数名，枚举范围：drawCuboid/drawCylinder/drawCone/drawArrow/drawDimensionLabel/drawDirectLabel）
+    "xxx"（只需要给出函数名，枚举范围：drawCuboid/drawCylinder/drawCone/drawArrow/drawDimensionLine/drawDirectLabel）
 ]
 ```
 【每一步的输出】
@@ -99,11 +99,8 @@ xxxxx
 
 ### 绘图空间布局要求
 
-1. 对于箭头，需要距离左右侧图形至少各30px，且箭头长度至少50px。
-2. 必须使用水平方向的箭头。
-3. 对于长方体或正方体，必须使用斜二测画法，对于圆柱体，圆锥体，必须使用正视图画法。
-4. 对于延伸线标注（drawDimensionLabel），尽可能不要指定`textOffset`和`gap`参数，除非会引起遮挡。
-5. 
+1. 尽量不要使用drawArrow函数，如果使用，只能使用水平方向的箭头。
+2. 对于长方体或正方体，必须使用斜二测画法，对于圆柱体，圆锥体，必须使用正视图画法。
 
 ### 默认样式配置及核心工具函数
 
@@ -157,7 +154,7 @@ const DEFAULT_STYLES = {
 
 // =====================
 // 2) 标注/箭头统一默认样式（建议）
-//   适用于 drawArrow / drawDimensionLabel / drawCurlyBraceLabel / drawDirectLabel
+//   适用于 drawArrow / drawDimensionLine / drawCurlyBraceLabel / drawDirectLabel
 // =====================
 const DEFAULT_ANNOTATION_STYLES = {
     // --- 线条/箭头通用 ---
@@ -190,7 +187,7 @@ const DEFAULT_ANNOTATION_STYLES = {
     arrowSize: 8,
     arrowWidth: 3,
 
-    // --- 尺寸标注特有（drawDimensionLabel） ---
+    // --- 尺寸标注特有（drawDimensionLine） ---
     textOffset: 10,
     gap: 5,
     ext_length: 10,
@@ -368,7 +365,7 @@ function autoAvoidOverlap(svgRoot, opts = {}) {
     for (const textEl of labels) {
       if (!isVisibleEl(textEl)) continue;
 
-      // 来自 drawDimensionLabel 的向量信息
+      // 来自 drawDimensionLine 的向量信息
       const nx0 = parseFloat(textEl.dataset.nx || "0");
       const ny0 = parseFloat(textEl.dataset.ny || "1");
       const ux0 = parseFloat(textEl.dataset.ux || "1");
@@ -1424,23 +1421,19 @@ function drawArrow(config) {
 
 #### 尺寸标注
 
-##### 延伸线标注
+##### 尺寸线标注
 ```javascript
 /**
- * [通用工具] 绘制工程制图风格的尺寸标注
+ * [通用工具] 绘制工程制图风格的尺寸线标注
  * 
  * 功能特性：
- * 1. 支持 3D 坐标自动投影（依赖 Projections 配置）。
- * 2. "工"字形样式：
- *    - 延伸线 (Extension Lines): 垂直于测量向量。
- *    - 主尺寸线 (Dimension Line): 平行于测量向量，且包含箭头。
+ * 1. 支持 3D 坐标自动投影。
+ * 2. 去除间隙 (Gap)：延伸线直接从测量点 p1, p2 出发。
  * 3. 几何细节控制 (通过 styles 配置):
- *    - gap: 延伸线起始点距离测量点的间隙。
- *    - ext_length: 延伸线的总长度（代码逻辑中，主尺寸线位于延伸线的中点）。
- * 4. 文本自动对齐：
- *    - 根据法向量方向自动判断文本对齐方式 (start/middle/end)，避免文本与线条重叠。
- *    - 包含白色描边 (Halo) 以增强对比度。
- * 适用场景：长方体的长宽高，圆柱的高等
+ *    - ext_length: 延伸线的总长度。尺寸线默认位于延伸线的 80% 位置，留出少量尾端。
+ * 4. 文本自动对齐与避让支持。
+ * 
+ * 使用场景：长方体长宽高，正方体棱长，圆柱的高
  *
  * @param {object} config - 配置对象
  * @param {string} config.id - SVG组ID
@@ -1450,10 +1443,10 @@ function drawArrow(config) {
  * @param {number} config.centerY - 画布中心点 Y
  * @param {string} config.direction - "上" | "下" | "左" | "右"
  * @param {string} config.text - 标注文本
- * @param {function} [config.projectFn] - 投影函数 (默认 Projections.OBLIQUE)
- * @param {object} [config.styles] - 样式覆盖 { gap, ext_length, arrowSize, ... }
+ * @param {function} [config.projectFn] - 投影函数
+ * @param {object} [config.styles] - 样式覆盖 { ext_length, arrowSize, ... }
  */
-function drawDimensionLabel(config) {
+function drawDimensionLine(config) {
     const {
         id,
         p1,
@@ -1466,26 +1459,25 @@ function drawDimensionLabel(config) {
 
     const s = { ...DEFAULT_ANNOTATION_STYLES, ...styles };
 
-    // 直接使用全局 svg（你模板里 const svg = ...），否则 fallback 到 window.mainSvg
     const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
-    if (!svgTarget) throw new Error("drawDimensionLabel: global svg not found.");
+    if (!svgTarget) throw new Error("drawDimensionLine: global svg not found.");
 
     // 1) 投影
     const pt1 = projectFn(p1.x, p1.y, p1.z, config);
     const pt2 = projectFn(p2.x, p2.y, p2.z, config);
 
-    // 2) 向量
+    // 2) 向量计算
     const dx = pt2.px - pt1.px;
     const dy = pt2.py - pt1.py;
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len < 0.001) return null;
 
-    const ux = dx / len;
+    const ux = dx / len; // 单位方向向量
     const uy = dy / len;
-    const baseNx = -uy;
+    const baseNx = -uy;  // 法向量
     const baseNy = ux;
 
-    // 3) 方向枚举 -> dirSign
+    // 3) 方向判定
     const dirVectors = {
         "上": { x: 0,  y: -1 },
         "下": { x: 0,  y:  1 },
@@ -1499,28 +1491,30 @@ function drawDimensionLabel(config) {
     const nx = baseNx * dirSign;
     const ny = baseNy * dirSign;
 
-    // 4) 几何点
-    const gap = s.gap ?? 15;
-    const extLen = s.ext_length ?? 10;
+    // 4) 几何点计算
+    // extLen 为延伸线总长度
+    const extLen = s.ext_length ?? 25; 
+    // 尺寸线位置：设在延伸线的 80% 处，留出 20% 的出头（符合制图标准）
+    const dimPos = extLen * 0.8; 
 
     const dimP1 = {
-        x: pt1.px + nx * (gap + extLen / 2),
-        y: pt1.py + ny * (gap + extLen / 2)
+        x: pt1.px + nx * dimPos,
+        y: pt1.py + ny * dimPos
     };
     const dimP2 = {
-        x: pt2.px + nx * (gap + extLen / 2),
-        y: pt2.py + ny * (gap + extLen / 2)
+        x: pt2.px + nx * dimPos,
+        y: pt2.py + ny * dimPos
     };
 
-    const ext1_Start = { x: pt1.px + nx * gap, y: pt1.py + ny * gap };
-    const ext1_End   = { x: pt1.px + nx * (gap + extLen), y: pt1.py + ny * (gap + extLen) };
-    const ext2_Start = { x: pt2.px + nx * gap, y: pt2.py + ny * gap };
-    const ext2_End   = { x: pt2.px + nx * (gap + extLen), y: pt2.py + ny * (gap + extLen) };
+    // 延伸线起点紧贴 pt1, pt2
+    const ext1_Start = { x: pt1.px, y: pt1.py };
+    const ext1_End   = { x: pt1.px + nx * extLen, y: pt1.py + ny * extLen };
+    const ext2_Start = { x: pt2.px, y: pt2.py };
+    const ext2_End   = { x: pt2.px + nx * extLen, y: pt2.py + ny * extLen };
 
-    // 5) 组
+    // 5) 创建组
     const g = document.createElementNS(SVG_NS, "g");
     g.setAttribute("id", id);
-    // 给整个组加个特殊类，避让计算时忽略自己组内的线条¶
     g.setAttribute("class", "annotation-group");
 
     const applyStroke = (el) => {
@@ -1532,7 +1526,7 @@ function drawDimensionLabel(config) {
         if (s.dashArray) el.setAttribute("stroke-dasharray", s.dashArray);
     };
 
-    // 6) 延伸线
+    // 6) 绘制延伸线 (Extension Lines)
     const elExt = document.createElementNS(SVG_NS, "path");
     elExt.setAttribute("id", `${id}-ext`);
     elExt.setAttribute(
@@ -1544,7 +1538,7 @@ function drawDimensionLabel(config) {
     applyStroke(elExt);
     g.appendChild(elExt);
 
-    // 7) 主尺寸线
+    // 7) 绘制主尺寸线 (Dimension Line)
     const elDim = document.createElementNS(SVG_NS, "line");
     elDim.setAttribute("id", `${id}-dim`);
     elDim.setAttribute("x1", dimP1.x);
@@ -1554,7 +1548,7 @@ function drawDimensionLabel(config) {
     applyStroke(elDim);
     g.appendChild(elDim);
 
-    // 8) 双箭头
+    // 8) 绘制双箭头
     const arrowSize = s.arrowSize ?? 8;
     const arrowWidth = s.arrowWidth ?? 3;
 
@@ -1579,10 +1573,10 @@ function drawDimensionLabel(config) {
     if (s.opacity != null) elArrows.setAttribute("fill-opacity", s.opacity);
     g.appendChild(elArrows);
 
-    // 9) 文本（动态 anchor）
+    // 9) 绘制文本
     const midX = (dimP1.x + dimP2.x) / 2;
     const midY = (dimP1.y + dimP2.y) / 2;
-    const textOffset = s.textOffset ?? 13;
+    const textOffset = s.textOffset ?? 10;
 
     const textX = midX + nx * textOffset;
     const textY = midY + ny * textOffset;
@@ -1601,30 +1595,31 @@ function drawDimensionLabel(config) {
     elText.setAttribute("font-family", s.fontFamily);
     elText.setAttribute("fill", s.textFill ?? s.fill);
 
-    // Halo
-    elText.setAttribute("stroke", s.haloStroke);
-    elText.setAttribute("stroke-width", s.haloWidth);
+    // Halo 效果
+    elText.setAttribute("stroke", s.haloStroke || "white");
+    elText.setAttribute("stroke-width", s.haloWidth || 3);
     elText.setAttribute("paint-order", "stroke");
-    elText.setAttribute("stroke-linejoin", s.haloLinejoin || "round");
+    elText.setAttribute("stroke-linejoin", "round");
 
     elText.textContent = text;
 
-    elText.classList.add("smart-label"); // 标记它是智能标签
+    // 智能避让相关元数据
+    elText.classList.add("smart-label");
     elText.dataset.nx = nx;
     elText.dataset.ny = ny;
     elText.dataset.ux = ux;
     elText.dataset.uy = uy;
-    elText.dataset.ox = textX;           // 初始位置 X
-    elText.dataset.oy = textY;           // 初始位置 Y
-    elText.dataset.limit = (len / 2) - (s.arrowSize || 8) - 5; 
-    elText.dataset.parentId = id;        // 归属组 ID
+    elText.dataset.ox = textX;
+    elText.dataset.oy = textY;
+    elText.dataset.limit = (len / 2) - arrowSize - 5;
+    elText.dataset.parentId = id;
 
     g.appendChild(elText);
 
-    // 先挂到 svg，bbox 才可信
+    // 挂载到画布
     svgTarget.appendChild(g);
 
-    // 可选文字背景 rect
+    // 可选背景矩形
     if (s.textBackground) {
         const bb = elText.getBBox();
         const pad = s.textBgPadding ?? 3;
@@ -1638,7 +1633,6 @@ function drawDimensionLabel(config) {
         bg.setAttribute("ry", 2);
         bg.setAttribute("fill", s.textBgFill ?? "white");
         bg.setAttribute("fill-opacity", s.textBgOpacity ?? 1);
-        bg.setAttribute("stroke", "none");
         g.insertBefore(bg, elText);
     }
 
@@ -1840,7 +1834,7 @@ function drawDirectLabel(config) {
     const ux = dx / len;
     const uy = dy / len;
 
-    // 法向（用于箭头展开）
+    // 法向（用于文字偏移，确保文字不压在线上）
     const nx = -uy;
     const ny = ux;
 
@@ -1860,71 +1854,62 @@ function drawDirectLabel(config) {
     if (s.linecap) line.setAttribute("stroke-linecap", s.linecap);
     if (s.linejoin) line.setAttribute("stroke-linejoin", s.linejoin);
 
-    // direct 默认虚线：优先 directDashArray，其次 dashArray
     const dash = (s.directDashArray != null) ? s.directDashArray : s.dashArray;
     if (dash) line.setAttribute("stroke-dasharray", dash);
 
     g.appendChild(line);
 
-    // // 2) 箭头（可选）
-    // const arrowSize = s.arrowSize ?? 6;
-    // const fat = arrowSize * 0.4;
-
-    // const mkArrow = (tipX, tipY, dirUx, dirUy, arrowId) => {
-    //     const baseX = tipX - dirUx * arrowSize;
-    //     const baseY = tipY - dirUy * arrowSize;
-
-    //     const leftX  = baseX + nx * fat;
-    //     const leftY  = baseY + ny * fat;
-    //     const rightX = baseX - nx * fat;
-    //     const rightY = baseY - ny * fat;
-
-    //     const p = document.createElementNS(SVG_NS, "path");
-    //     p.setAttribute("id", arrowId);
-    //     p.setAttribute("d", `M ${tipX},${tipY} L ${leftX},${leftY} L ${rightX},${rightY} Z`);
-    //     // p.setAttribute("fill", s.stroke);
-    //     p.setAttribute("fill", s.fill);
-    //     if (s.opacity != null) p.setAttribute("fill-opacity", s.opacity);
-    //     return p;
-    // };
-
-    // const arrowStart = (s.directArrowStart != null) ? s.directArrowStart : true;
-    // const arrowEnd   = (s.directArrowEnd != null) ? s.directArrowEnd : true;
-
-    // if (arrowStart) g.appendChild(mkArrow(pt1.px, pt1.py, -ux, -uy, `${id}-arrow-start`));
-    // if (arrowEnd)   g.appendChild(mkArrow(pt2.px, pt2.py,  ux,  uy, `${id}-arrow-end`));
-
-    // 3) 文本（居中）
+    // 2) 文本容器（用于整体偏移和旋转）
     const midX = (pt1.px + pt2.px) / 2;
     const midY = (pt1.py + pt2.py) / 2;
+    
+    // 计算偏移量：根据字号自动计算一个合适的间距，或者从 styles 中读取
+    const offsetDist = s.textOffset ?? (parseInt(s.fontSize) * 0.8 || 10); 
+    
+    // 计算旋转角度
+    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    // 确保文字永远是正向的（不倒立）
+    if (angle > 90 || angle < -90) {
+        angle += 180;
+    }
+
+    // 创建一个子组来放置文字及其背景，方便统一变换
+    const textGroup = document.createElementNS(SVG_NS, "g");
+    // 将文字平移到中点，再沿法线偏移，最后旋转
+    const tx = midX + nx * offsetDist;
+    const ty = midY + ny * offsetDist;
+    textGroup.setAttribute("transform", `translate(${tx}, ${ty}) rotate(${angle})`);
 
     const elText = document.createElementNS(SVG_NS, "text");
     elText.setAttribute("id", `${id}-text`);
-    elText.setAttribute("x", midX);
-    elText.setAttribute("y", midY);
+    // 此时坐标设为 0,0，因为变换已经在 group 上处理了
+    elText.setAttribute("x", 0);
+    elText.setAttribute("y", 0);
     elText.setAttribute("text-anchor", "middle");
     elText.setAttribute("dominant-baseline", "middle");
     elText.setAttribute("font-size", s.fontSize);
     elText.setAttribute("font-family", s.fontFamily);
     elText.setAttribute("fill", s.textFill ?? s.fill);
 
-    // Halo（direct 更强一点）
-    elText.setAttribute("stroke", s.haloStroke);
+    // Halo 效果
+    elText.setAttribute("stroke", s.haloStroke || "none");
     elText.setAttribute("stroke-width", Math.max(s.haloWidth ?? 3, 4));
     elText.setAttribute("paint-order", "stroke");
     elText.setAttribute("stroke-linejoin", s.haloLinejoin || "round");
 
     elText.textContent = text;
-    g.appendChild(elText);
+    textGroup.appendChild(elText);
+    g.appendChild(textGroup);
 
     svgTarget.appendChild(g);
 
-    // 可选文字背景
+    // 3) 可选文字背景
     if (s.textBackground) {
         const bb = elText.getBBox();
         const pad = s.textBgPadding ?? 3;
         const bg = document.createElementNS(SVG_NS, "rect");
         bg.setAttribute("id", `${id}-text-bg`);
+        // 背景框相对于文字居中
         bg.setAttribute("x", bb.x - pad);
         bg.setAttribute("y", bb.y - pad);
         bg.setAttribute("width", bb.width + pad * 2);
@@ -1934,7 +1919,8 @@ function drawDirectLabel(config) {
         bg.setAttribute("fill", s.textBgFill ?? "white");
         bg.setAttribute("fill-opacity", s.textBgOpacity ?? 1);
         bg.setAttribute("stroke", "none");
-        g.insertBefore(bg, elText);
+        // 插入到文字前面
+        textGroup.insertBefore(bg, elText);
     }
 
     return g;
@@ -2082,7 +2068,7 @@ svg.appendChild(areaText);
 [
     "drawCuboid",
     "drawArrow",
-    "drawDimensionLabel"
+    "drawDimensionLine"
 ]
 ```
 
@@ -2122,7 +2108,7 @@ drawCuboid({
 });
 
 // 1.1 标注棱长 "8分米"
-drawDimensionLabel({
+drawDimensionLine({
     id: "dim-cube-main-w",
     p1: { x: x_left, y: 0, z: 0 },
     p2: { x: x_left + S, y: 0, z: 0 },
@@ -2237,7 +2223,7 @@ if (faceTopBottom) {
 // ==========================================
 
 // 1. 标注下方长方体切面 (顶面)
-drawDimensionLabel({
+drawDimensionLine({
     id: "dim-cut-bottom",
     p1: { x: x_right + S, y: h_cut, z: 0 },
     p2: { x: x_right + S, y: h_cut, z: S },
@@ -2250,7 +2236,7 @@ drawDimensionLabel({
 // 上方长方体的底面高度 = h_cut + GAP_Y (即 y_top_start)
 const y_cut_top = h_cut + GAP_Y;
 
-drawDimensionLabel({
+drawDimensionLine({
     id: "dim-cut-top",
     p1: { x: x_right + S, y: y_cut_top, z: 0 },
     p2: { x: x_right + S, y: y_cut_top, z: S },
@@ -2300,7 +2286,7 @@ drawDimensionLabel({
     "drawCuboid",
     "drawCylinder",
     "drawArrow",
-    "drawDimensionLabel"
+    "drawDimensionLine"
 ]
 ```
 
@@ -2379,7 +2365,7 @@ svg.appendChild(waterLevelGroup);
 
 // 1.4 标注棱长 8cm (在前方面板的下方)
 // p1, p2 的 z=0 确保是前表面
-drawDimensionLabel({
+drawDimensionLine({
     id: "dim-len-8cm",
     p1: { x: -S/2, y: 0, z: 0 },
     p2: { x: S/2,  y: 0, z: 0 },
@@ -2389,7 +2375,7 @@ drawDimensionLabel({
 });
 
 // 1.5 标注水深 h=6.5cm
-drawDimensionLabel({
+drawDimensionLine({
     id: "dim-water-h",
     p1: { x: S/2, y: 0,       z: S }, // z=S/2 在侧面中间
     p2: { x: S/2, y: H_WATER, z: S },
@@ -2534,7 +2520,7 @@ if (cupWater) {
 
 // 在右侧容器的右前方棱上标注
 // x = S/2, z = 0 (右前棱)
-drawDimensionLabel({
+drawDimensionLine({
     id: "dim-rise-1.5",
     p1: { x: S/2, y: H_WATER, z: 0 },
     p2: { x: S/2, y: S,       z: 0 },

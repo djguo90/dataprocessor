@@ -4,6 +4,7 @@ import json
 import json_repair
 import re
 from checklist import remove_redundant_spaces, fix_continued_equality
+from latex_to_image import latex_to_image
 import os
 import sys
 
@@ -84,12 +85,6 @@ def split_data(samples, test_count, other_count, n_test_part, save_dir, tixing):
         result_path["训练集"][idx] = save_path
     return result_path
 
-# # 根据test/other及part取数据
-# def get_data_from_split_data(save_dir, tixing, data_type, part):
-#     data_path = Path(save_dir, tixing, "1.原始数据", f"{tixing}_{data_type}_原始数据_part{part:03d}.json").as_posix()
-#     # print(data_path)
-#     yield from read_jsonl(data_path)
-
 # 去除题干或解析为空的数据
 def remove_empty_content_analysis(samples, content_key_path, analysis_key_path):
     for sample in samples:
@@ -124,19 +119,8 @@ def get_phase1_crawl_in(samples, phase1_prompt_path, id_key_path, content_key_pa
         prompt = prompt_template.replace("{{question}}", content).replace("{{analysis}}", analysis)
         yield {"id": topic_id, "query": prompt}
 
-# # phase1爬取输入保存到文件
-# def save_phase1_crawl_in_result(samples, save_dir, tixing, data_type, part, p_version):
-#     save_path = Path(save_dir, tixing, "2.phase1爬取输入", f"{tixing}_{data_type}_phase1爬取输入_part{part:03d}_p{p_version}.json").as_posix()
-#     save_jsonl(samples, save_path)
-         
-# # 读取phase1爬取数据
-# def read_phase1_crawl_out(save_dir, tixing, data_type, part, p_version):
-#     save_path = Path(save_dir, tixing, "2.phase1爬取输出", f"{tixing}_{data_type}_phase1爬取输出_part{part:03d}_p{p_version}.json").as_posix()
-#     # print(save_path)
-#     yield from read_jsonl(save_path)
-
 # 解析phase1爬取数据
-def parse_phase1_result(samples, orig_samples, content_key_path, id_key_path, **kwargs):
+def parse_phase1_result(samples, orig_samples, content_key_path, id_key_path):
     id2content = {}
     for sample in orig_samples:
         content = get_values_by_key_path(sample, content_key_path)[0].strip()
@@ -146,7 +130,6 @@ def parse_phase1_result(samples, orig_samples, content_key_path, id_key_path, **
         sample_id = sample["id"]
         sample_content = id2content[sample_id]
         sample_answer = sample["answer"]
-        # print(1)
         yield {"id": sample_id, "question": sample_content, "phase1_answer": sample_answer}
 
 
@@ -155,7 +138,6 @@ def get_phase2_crawl_in(samples, phase2_prompt_path):
     with open(phase2_prompt_path) as reader:
         prompt_template = reader.read().strip()
     for sample in samples:
-        # print(1)
         sample_id = sample["id"]
         sample_question = sample["question"]
         sample_phase1_answer = sample["phase1_answer"]
@@ -163,15 +145,15 @@ def get_phase2_crawl_in(samples, phase2_prompt_path):
         yield {"id":sample_id, "query":query}
 
 
-# phase2爬取输入保存到文件
-def save_phase2_crawl_in_result(samples, save_dir, tixing, data_type, part, p_version):
-    save_path = Path(save_dir, tixing, "3.phase2爬取输入", f"{tixing}_{data_type}_phase2爬取输入_part{part:03d}_p{p_version}.json").as_posix()
-    save_jsonl(samples, save_path)
+# # phase2爬取输入保存到文件
+# def save_phase2_crawl_in_result(samples, save_dir, tixing, data_type, part, p_version):
+#     save_path = Path(save_dir, tixing, "3.phase2爬取输入", f"{tixing}_{data_type}_phase2爬取输入_part{part:03d}_p{p_version}.json").as_posix()
+#     save_jsonl(samples, save_path)
 
-# 读取phase2爬取输出
-def read_phase2_crawl_out(save_dir, tixing, data_type, part, p_version):
-    save_path = Path(save_dir, tixing, "3.phase2爬取输出", f"{tixing}_{data_type}_phase2爬取输出_part{part:03d}_p{p_version}.json").as_posix()
-    yield from read_jsonl(save_path)
+# # 读取phase2爬取输出
+# def read_phase2_crawl_out(save_dir, tixing, data_type, part, p_version):
+#     save_path = Path(save_dir, tixing, "3.phase2爬取输出", f"{tixing}_{data_type}_phase2爬取输出_part{part:03d}_p{p_version}.json").as_posix()
+#     yield from read_jsonl(save_path)
 
 # 解析phase2爬取输出
 def parse_phase2_result(samples_orig, samples_phase1, samples_phase2, content_key_path, analyse_key_path, id_key_path):
@@ -325,10 +307,10 @@ def save_manim_format_result(samples, save_dir, tixing, data_type, part, p_versi
 
 
 # 保存解析文本
-def save_analysis_result(samples, save_dir, tixing, data_type, part, p_version, id_key_path, analysis_key_path, include_id_path):
+def save_content_analysis_result(samples, save_dir, tixing, data_type, part, p_version, id_key_path, analysis_key_path, content_key_path, include_id_path):
     from PIL import Image, ImageDraw, ImageFont
     import textwrap
-    save_dir = Path(save_dir, tixing, "6.解析图片", f"{tixing}_{data_type}_解析图片_part{int(part):03d}_p{p_version}")
+    save_dir = Path(save_dir, tixing, "6.题目与解析图片", f"{tixing}_{data_type}_题目与解析图片_part{int(part):03d}_p{p_version}")
     save_dir.mkdir(exist_ok=True, parents=True)
     with open(include_id_path) as reader:
         include_ids = set([x.strip() for x in reader])
@@ -337,30 +319,28 @@ def save_analysis_result(samples, save_dir, tixing, data_type, part, p_version, 
         if sample_id not in include_ids:
             continue
         sample_analysis = get_values_by_key_path(sample, analysis_key_path)[0]
-        save_path = save_dir / f"{sample_id}.png"
-        # with open(save_path, "w") as writer:
-        #     writer.write(sample_analysis)
-    
+        sample_content = get_values_by_key_path(sample, content_key_path)[0]
+        save_path_analysis = save_dir / f"{sample_id}_1.png"
+        save_path_content = save_dir / f"{sample_id}_2.png"
 
-        # 定义文本内容
-        # content = "Hello, world!"
+        # # 创建一个新的白色图片
+        # image = Image.new('RGB', (550, 400), color = (255, 255, 255))
 
-        # 创建一个新的白色图片
-        image = Image.new('RGB', (550, 400), color = (255, 255, 255))
+        # # 获取一个可以在图片上绘制的对象
+        # draw = ImageDraw.Draw(image)
 
-        # 获取一个可以在图片上绘制的对象
-        draw = ImageDraw.Draw(image)
+        # # 设置字体和大小（需要事先下载字体文件，例如arial.ttf）
+        # font = ImageFont.truetype("/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/代码/AlibabaPuHuiTi-3-35-Thin/AlibabaPuHuiTi-3-35-Thin.ttf", 12)
 
-        # 设置字体和大小（需要事先下载字体文件，例如arial.ttf）
-        font = ImageFont.truetype("/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/代码/AlibabaPuHuiTi-3-35-Thin/AlibabaPuHuiTi-3-35-Thin.ttf", 12)
-
-        # 在图片上绘制文本
-        wrapped_lines = textwrap.wrap(sample_analysis, width=40)
-        wrapped_text = '\n'.join(wrapped_lines)
-        draw.text((10,10), wrapped_text, fill=(0,0,0), font=font)
+        # # 在图片上绘制文本
+        # wrapped_lines = textwrap.wrap(sample_analysis, width=40)
+        # wrapped_text = '\n'.join(wrapped_lines)
+        # draw.text((10,10), wrapped_text, fill=(0,0,0), font=font)
+        latex_to_image(sample_analysis, save_path_analysis)
+        latex_to_image(sample_content, save_path_content)
 
         # 保存图片
-        image.save(save_path)
+        # image.save(save_path)
 
 
 @checkpoint_to_file
@@ -374,12 +354,24 @@ def pipeline_phase1_crawl_input(orig_split_data_path, phase1_prompt_path, id_key
     samples = get_phase1_crawl_in(samples, phase1_prompt_path, id_key_path, content_key_path, analysis_key_path)
     yield from samples
 
+@checkpoint_to_file
+def pipeline_phase2_crawl_input(orig_split_data_path, phase1_crawl_out_path, phase2_prompt_path, id_key_path, content_key_path):
+    """
+    阶段1：生成爬取输入
+    读取 -> 过滤空视频 -> 格式化 -> 生成Prompt
+    """
+    samples_orig = read_jsonl(orig_split_data_path)
+    samples = read_jsonl(phase1_crawl_out_path)
+    samples = parse_phase1_result(samples, samples_orig, content_key_path, id_key_path)
+    samples = get_phase2_crawl_in(samples, phase2_prompt_path)
+    yield from samples
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--save_dir", type=str, default="/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据")
     parser.add_argument("--tixing", type=str, default="小数单模-立体几何")
-    parser.add_argument("--stage", type=str, default="获得解析文本", choices=["拆分数据", "phase1爬取输入", "phase2爬取输入", "转Manim格式", "获得解析文本"])
+    parser.add_argument("--stage", type=str, default="获得解析文本", choices=["拆分数据", "phase1爬取输入", "phase2爬取输入", "转Manim格式", "获得题目解析文本"])
     parser.add_argument("--test_count", type=int, default=200)
     parser.add_argument("--other_count", type=int, default=500)
     parser.add_argument("--n_test_part", type=int, default=2)
@@ -406,17 +398,19 @@ if __name__ == "__main__":
     elif args.phase1_prompt_version == "v2":
         phase1_prompt_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/solid_geometry/prompts/prompt_SVG_phase1_v0105.md"
     elif args.phase1_prompt_version == "v3":
-        phase1_prompt_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/solid_geometry/prompts/prompt_SVG_phase1_v0108.md"
+        phase1_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase1_v0108.md"
     
     if args.phase2_prompt_version == "v1":
         phase2_prompt_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/solid_geometry/prompts/prompt_SVG_phase2_v0105.md"
     elif args.phase2_prompt_version == "v2":
         phase2_prompt_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/solid_geometry/prompts/prompt_SVG_phase2_v0106.md"
     elif args.phase2_prompt_version == "v3":
-        phase2_prompt_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/solid_geometry/prompts/prompt_SVG_phase2_v0108.md"
+        phase2_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase2_v0108.md"
     
     orig_split_data_path = Path(args.save_dir, args.tixing, "1.原始数据", f"{args.tixing}_{args.data_type}_原始数据_part{args.part:03d}.json").as_posix()
     phase1_crawl_in_save_path = Path(args.save_dir, args.tixing, "2.phase1爬取输入", f"{args.tixing}_{args.data_type}_phase1爬取输入_part{args.part:03d}_p{args.phase1_prompt_version}.json").as_posix()
+    phase1_crawl_out_save_path = Path(args.save_dir, args.tixing, "2.phase1爬取输出", f"{args.tixing}_{args.data_type}_phase1爬取输出_part{args.part:03d}_p{args.phase1_prompt_version}.json").as_posix()
+    phase2_crawl_in_save_path = Path(args.save_dir, args.tixing, "3.phase2爬取输入", f"{args.tixing}_{args.data_type}_phase2爬取输入_part{args.part:03d}_p{args.phase1_prompt_version}.json").as_posix()
     
     if args.stage == "拆分数据":
         samples = init_data(orig_data_paths)
@@ -434,6 +428,25 @@ if __name__ == "__main__":
                 analysis_key_path=args.analysis_key_path
             )
         )
+    elif args.stage == "phase2爬取输入":
+        run_pipeline(
+            pipeline_phase2_crawl_input(
+                save_path=phase2_crawl_in_save_path, 
+                mode="write", 
+            )(
+                orig_split_data_path=orig_split_data_path, 
+                phase1_crawl_out_path=phase1_crawl_out_save_path,
+                phase2_prompt_path=phase2_prompt_path,
+                id_key_path=args.id_key_path, 
+                content_key_path=args.content_key_path, 
+            )
+        )
+    elif args.stage == "获得题目解析文本":
+        rendered_ids_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/5.视频结果/小数单模-立体几何_试标_视频结果_part001_pv2_matched_195/rendered_ids.txt"
+        # samples = get_data_from_split_data(args.save_dir, args.tixing, args.data_type, args.part)
+        samples = read_jsonl(orig_split_data_path)
+        samples = remove_empty_content_analysis(samples, args.content_key_path, args.analysis_key_path)
+        save_content_analysis_result(samples, args.save_dir, args.tixing, args.data_type, args.part, args.phase2_prompt_version, args.id_key_path, args.analysis_key_path, args.content_key_path, rendered_ids_path)
     # elif args.stage == "phase1爬取输入":
     #     samples = get_data_from_split_data(args.save_dir, args.tixing, args.data_type, args.part)
     #     samples = remove_empty_content_analysis(samples, args.content_key_path, args.analysis_key_path)
