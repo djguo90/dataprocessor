@@ -23,19 +23,48 @@
 # --analysis_key_path .analysis.html \
 # --phase1_prompt_version v3
 
+# for i in {1..5}
+# do
+#     python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/main.py \
+#     --save_dir /mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解 \
+#     --tixing 小数单模-立体几何 \
+#     --stage phase1爬取输入 \
+#     --data_type 训练集 \
+#     --part ${i} \
+#     --id_key_path .topic_id \
+#     --content_key_path .video_content \
+#     --analysis_key_path .analysis.html \
+#     --phase1_prompt_version v3
+# done
+
 ## phase2 爬取输入
 
-python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/main.py \
---save_dir /mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解 \
---tixing 小数单模-立体几何 \
---stage phase2爬取输入 \
---data_type 试标 \
---part 1 \
---id_key_path .topic_id \
---content_key_path .video_content \
---analysis_key_path .analysis.html \
---phase1_prompt_version v3 \
---phase2_prompt_version v3
+# python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/main.py \
+# --save_dir /mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解 \
+# --tixing 小数单模-立体几何 \
+# --stage phase2爬取输入 \
+# --data_type 试标 \
+# --part 1 \
+# --id_key_path .topic_id \
+# --content_key_path .video_content \
+# --analysis_key_path .analysis.html \
+# --phase1_prompt_version v3 \
+# --phase2_prompt_version v3
+
+# for i in {1..5}
+# do
+#     python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/main.py \
+#     --save_dir /mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解 \
+#     --tixing 小数单模-立体几何 \
+#     --stage phase2爬取输入 \
+#     --data_type 训练集 \
+#     --part ${i} \
+#     --id_key_path .topic_id \
+#     --content_key_path .video_content \
+#     --analysis_key_path .analysis.html \
+#     --phase1_prompt_version v3 \
+#     --phase2_prompt_version v3
+# done
 
 ## 转manim格式
 
@@ -52,6 +81,22 @@ python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模
 # --phase2_prompt_version v3 \
 # --html_template_path /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/htmlTemplate.html
 
+for i in {1..5}
+do
+    python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/main.py \
+    --save_dir /mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解 \
+    --tixing 小数单模-立体几何 \
+    --stage 转Manim格式 \
+    --data_type 训练集 \
+    --part ${i} \
+    --id_key_path .topic_id \
+    --content_key_path .video_content \
+    --analysis_key_path .analysis.html \
+    --phase1_prompt_version v3 \
+    --phase2_prompt_version v3 \
+    --html_template_path /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/htmlTemplate.html
+done
+
 ## phase2 保存题目和解析
 
 # /mnt/onet/temp_djguo/miniforge3/bin/python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/main.py \
@@ -64,4 +109,5 @@ python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模
 # --content_key_path .video_content \
 # --analysis_key_path .analysis.html \
 # --phase1_prompt_version v3 \
-# --phase2_prompt_version v3
+# --phase2_prompt_version v3 \
+# --rendered_ids_path /mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果/小数单模-立体几何_试标_视频结果_part001_pv3_matched_196/rendered_ids.txt

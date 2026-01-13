@@ -57,7 +57,7 @@ except Exception as exc:  # pragma: no cover
 # ------- 可配置变量（放在最前，便于手工调整；均可被命令行覆盖） -------
 SOURCE_JSON_PATH = Path(
     # r"/mnt/pan8T/temp_yhzou6/数学图形化讲解/files_yhzou/标注数据补充_1225/补充数据_data_1225_一二阶段融合1_matched_1133.jsonl"
-    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式/小数单模-立体几何_试标_manim可处理格式_part001_pv3_matched_196.json"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式/小数单模-立体几何_训练集_manim可处理格式_part001_pv3_matched_489.json"
 )
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v5-prompt测试\svg-stage2-2d-gemini-v5_100_matched_98.json")
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3.5-平台标注500题-fixed-20251204\svg-stage2-2d-gemini-v3.5_500_matched_489.json")
@@ -71,18 +71,18 @@ SOURCE_JSON_PATH = Path(
 
 
 QUESTION_BANK_PATH = Path(
-    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式/小数单模-立体几何_试标_manim可处理格式_part001_pv3_matched_196.json"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式/小数单模-立体几何_训练集_manim可处理格式_part001_pv3_matched_489.json"
 )
 OUTPUT_ROOT = Path(
-    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果/小数单模-立体几何_试标_manim可处理格式_part001_pv3_matched_196"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果/小数单模-立体几何_训练集_manim可处理格式_part001_pv3_matched_489"
 )
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3-平台试标100题\code-test")
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3-平台试标100题\code")
 # OUTPUT_ROOT = Path(r"D:\github\svg_exp\script\manim_outputs")
 DEFAULT_WORKERS = 10
 # 可选：包含 / 排除 ID 列表文件（每行一个 id），置None则不生效
-# INCLUDE_ID_PATH: Path | None = None
-INCLUDE_ID_PATH: Path | None = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/4.manim可处理格式/ids.txt"
+INCLUDE_ID_PATH: Path | None = None
+# INCLUDE_ID_PATH: Path | None = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/4.manim可处理格式/ids.txt"
 EXCLUDE_ID_PATH: Path | None = None
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3-平台标注500题-20251201\svg-stage2-2d-gemini-v3_500_matched_377_ids.txt")
 
@@ -632,9 +632,14 @@ def generate_manim_py(
     class_name = sanitize_class_name(id_str)
 
     def _escape(text: str) -> str:
-        # 仅转义双引号；换行替换为空格，避免生成的字符串被截断
-        # return text.replace('"', '\\"').replace("\n", " ").replace("\r", " ")
-        return text.replace('"', '\\"').replace("\\n", "\\\\").replace("\n", "\\\\").replace("\r", "\\\\").replace("<b>", "$\\textbf{").replace("</b>", "}$")
+        return (
+            text.replace('"', '\\"')
+            .replace("\\n", "\\\\")
+            .replace("\n", "\\\\")
+            .replace("\r", "\\\\")
+            .replace("<b>", "$\\textbf{")
+            .replace("</b>", "}$")
+        )
 
     q_safe = post_process_tex(_escape(question))
     lines = []
@@ -655,13 +660,17 @@ def generate_manim_py(
     lines.append(
         "        animation_area = Rectangle(width=5.0, height=6.0, fill_opacity=0, color=WHITE)"
     )
-    lines.append("        animation_area.to_edge(LEFT, buff=1)")
+    lines.append("        animation_area.z_index = -100")          # 强制最底层")
+    lines.append("        animation_area.to_edge(LEFT, buff=0.5)")
     lines.append(
         "        text_area = Rectangle(width=6.0, height=6.0, fill_opacity=0, color=WHITE)"
     )
-    lines.append("        text_area.to_edge(RIGHT, buff=1)")
-    # lines.append("        text_area.shift(LEFT*0.1)  # 文字区整体左移一点")
+    lines.append("        text_area.to_edge(RIGHT, buff=0.2)")
     lines.append("        self.add(animation_area, text_area)")
+
+    # ✅ 固定文本锚点：text_area 左上角同一位置（给一点内边距）
+    lines.append("        text_anchor = text_area.get_corner(UL) + RIGHT*0.35 + DOWN*0.35")
+
     lines.append(f'        problem = Tex(r"{q_safe}")')
     lines.append("        problem.to_edge(UP, buff=0.5)")
     lines.append("        self.play(Write(problem))")
@@ -671,96 +680,55 @@ def generate_manim_py(
 
     for idx, narration in enumerate(timeline, start=1):
         n_safe = post_process_tex(_escape(narration))
-
-        # Check if this narration has a visual operation (PNG)
         png_path = narration_to_png.get(narration)
         disp = display_map.get(narration, "")
         disp_safe = post_process_display(post_process_tex(_escape(disp)))
 
         if png_path:
-            # Visual Step
             lines.append(f"        # Step {idx}")
             lines.append(f'        with self.voiceover(text="{n_safe}") as tracker:')
-            if disp_safe.startswith(r"$\textcolor{blue}"):
-                lines.append("            # semantic step changed -> clear textarea")
-                lines.append("            if len(text_items) > 0:")
-                lines.append("                self.play(FadeOut(text_items))")
-                lines.append("                text_items = VGroup()")
-            lines.append(
-                f"            new_img = ImageMobject(r'{png_path}').scale(1.3)"
-            )
-            lines.append(
-                "            new_img.move_to(animation_area.get_center() + RIGHT*0.3)"
-            )
+
+            lines.append(f"            new_img = ImageMobject(r'{png_path}').scale(1.3)")
+            lines.append("            new_img.move_to(animation_area.get_center() + RIGHT*0.3)")
             lines.append("            if current_img is None:")
             lines.append("                self.play(FadeIn(new_img))")
             lines.append("            else:")
-            lines.append(
-                "                self.play(FadeOut(current_img), FadeIn(new_img))"
-            )
+            lines.append("                self.play(FadeOut(current_img), FadeIn(new_img))")
             lines.append("            current_img = new_img")
 
             if disp:
-                lines.append(
-                    f'            text_line = Tex(r"{disp_safe}", color=BLACK, font_size=animation_font_size)'
-                )
-                lines.append("            if len(text_items) == 0:")
-                lines.append(
-                    "                # 将首行上屏讲解进一步向右、向下偏移，避免贴近标题"
-                )
-                lines.append("                text_line.move_to(")
-                lines.append(
-                    "                    text_area.get_left() + RIGHT*1.5 + problem.get_bottom() - [0, text_line.get_height()*2.5, 0],"
-                )
-                lines.append("                    aligned_edge=LEFT,")
-                lines.append("                )")
-                lines.append("            else:")
-                lines.append(
-                    "                text_line.next_to(text_items[-1], DOWN, aligned_edge=LEFT, buff=text_line.get_height()*0.8)"
-                )
-                lines.append(
-                    "            self.play(Write(text_line), run_time=tracker.duration * 0.4)"
-                )
-                lines.append("            text_items.add(text_line)")
-
-            lines.append(
-                "            self.wait(1e-3)  # minimal positive wait to keep block non-empty"
-            )
-
-        else:
-            # Voice-only: still show display text if present
-            lines.append(f"        # Voice-only {idx}")
-            lines.append(f'        with self.voiceover(text="{n_safe}") as tracker:')
-            if disp_safe.startswith(r"$\textcolor{blue}"):
-                lines.append("            # semantic step changed -> clear textarea")
+                # ✅ 每一步都清空 text_items
                 lines.append("            if len(text_items) > 0:")
                 lines.append("                self.play(FadeOut(text_items))")
                 lines.append("                text_items = VGroup()")
-            if disp:
                 lines.append(
-                    f'            text_line = Tex(r"{disp_safe}", color=BLACK, font_size=animation_font_size)'
+                    f'            text_line = Tex(r"{disp_safe}", color=BLACK, font_size=animation_font_size, tex_template=TexTemplateLibrary.ctex, tex_environment="flushleft")'
                 )
-                lines.append("            if len(text_items) == 0:")
-                lines.append(
-                    "                # 将首行上屏讲解进一步向右、向下偏移，避免贴近标题"
-                )
-                lines.append("                text_line.move_to(")
-                lines.append(
-                    "                    text_area.get_left() + RIGHT*1.5 + problem.get_bottom() - [0, text_line.get_height()*2.5, 0],"
-                )
-                lines.append("                    aligned_edge=LEFT,")
-                lines.append("                )")
-                lines.append("            else:")
-                lines.append(
-                    "                text_line.next_to(text_items[-1], DOWN, aligned_edge=LEFT, buff=text_line.get_height()*0.8)"
-                )
-                lines.append(
-                    "            self.play(Write(text_line), run_time=tracker.duration * 0.4)"
-                )
+                # ✅ 每一步都从同一个锚点开始放
+                lines.append("            text_line.move_to(text_anchor, aligned_edge=UL)")
+                lines.append("            self.play(Write(text_line), run_time=tracker.duration * 0.4)")
                 lines.append("            text_items.add(text_line)")
-            lines.append(
-                "            self.wait(1e-3)  # minimal positive wait to keep block non-empty"
-            )
+
+            lines.append("            self.wait(1e-3)")
+
+        else:
+            lines.append(f"        # Voice-only {idx}")
+            lines.append(f'        with self.voiceover(text="{n_safe}") as tracker:')
+
+            if disp:
+                # ✅ 每一步都清空 text_items
+                lines.append("            if len(text_items) > 0:")
+                lines.append("                self.play(FadeOut(text_items))")
+                lines.append("                text_items = VGroup()")
+                lines.append(
+                    f'            text_line = Tex(r"{disp_safe}", color=BLACK, font_size=animation_font_size, tex_template=TexTemplateLibrary.ctex, tex_environment="flushleft")'
+                )
+                # ✅ 每一步都从同一个锚点开始放
+                lines.append("            text_line.move_to(text_anchor, aligned_edge=UL)")
+                lines.append("            self.play(Write(text_line), run_time=tracker.duration * 0.4)")
+                lines.append("            text_items.add(text_line)")
+
+            lines.append("            self.wait(1e-3)")
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
 

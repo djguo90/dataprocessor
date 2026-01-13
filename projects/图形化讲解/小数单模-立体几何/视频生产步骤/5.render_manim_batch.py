@@ -57,10 +57,10 @@ from typing import List, Tuple
 from tqdm import tqdm
 
 # -------- 全局配置 --------
-INPUT_ROOT = Path(r"/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/5.视频结果/小数单模-立体几何_试标_视频前处理_part001_pv2_matched_195")
+INPUT_ROOT = Path(r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果/小数单模-立体几何_训练集_manim可处理格式_part001_pv3_matched_489")
 # Path(r"D:\github\svg_exp\script\test_outputs_multi")
 OUTPUT_ROOT = Path(
-    r"/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/5.视频结果/小数单模-立体几何_试标_视频结果_part001_pv2_matched_195"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果/小数单模-立体几何_训练集_视频结果_part001_pv3_matched_489"
 )
 # RANGES: [[start, end], ...] 1-based inclusive; end None -> to last
 RANGES: List[Tuple[int, int | None]] = [(1, None)]

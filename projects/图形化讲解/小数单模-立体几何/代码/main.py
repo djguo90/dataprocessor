@@ -194,12 +194,15 @@ def check_list(samples):
                 is_bad = True
         if is_bad:
             continue
-        for step in phase1_answer:
-            if step["type"] == "出选择题":
-                continue
-            step["display_cont"] = remove_redundant_spaces(step["display_cont"])
-            step["display_cont"] = fix_continued_equality(step["display_cont"])
-            step["display_cont"] = remove_redundant_spaces(step["display_cont"])
+        try:
+            for step in phase1_answer:
+                if step["type"] == "出选择题":
+                    continue
+                step["display_cont"] = remove_redundant_spaces(step["display_cont"])
+                step["display_cont"] = fix_continued_equality(step["display_cont"])
+                step["display_cont"] = remove_redundant_spaces(step["display_cont"])
+        except:
+            continue
         phase1_answer = "\n".join([f"<JSON>{json.dumps(_, ensure_ascii=False)}</JSON>" for _ in phase1_answer])
         sample["phase1_answer"] = phase1_answer
         # TODO 答案展示内容为空
@@ -238,14 +241,23 @@ def to_manim_format(samples, html_template_path):
         # ===================== 步骤4：构建讲解展示字段 =====================
         explanation_display = {}
         orig_step = None
+        prefix = ""
         for item in stage1_data:
             if item["type"] == "出选择题":
                 continue
             content = item["cont"]
-            text_content = item["display_cont"]
+            text_content = item["display_cont"].strip()
             if item["step"] != orig_step:
-                text_content = f"$\\textcolor{{blue}}{{【{item['step']}】}}$\n" + text_content
-                orig_step = item["step"]
+                prefix = f"$\\textcolor{{blue}}{{【{item['step']}】}}$"
+                text_content = prefix.strip() + "\n" + text_content.strip()
+                prefix = text_content
+            else:
+                if text_content:
+                    text_content = prefix.strip() + "\n" + text_content.strip()
+                    prefix = text_content
+                else:
+                    text_content = ""
+            orig_step = item["step"]
             graph_content = item["visual_guide"]
             explanation_display[content] = [text_content, graph_content]
 
@@ -300,10 +312,10 @@ def to_manim_format(samples, html_template_path):
         sample["answer"] = target_format
         yield sample
 
-# 保存可以处理的格式
-def save_manim_format_result(samples, save_dir, tixing, data_type, part, p_version):
-    save_path = Path(save_dir, tixing, "4.manim可处理格式", f"{tixing}_{data_type}_manim可处理格式_part{part:03d}_p{p_version}.json").as_posix()
-    save_jsonl(samples, save_path, overwrite=True)
+# # 保存可以处理的格式
+# def save_manim_format_result(samples, save_dir, tixing, data_type, part, p_version):
+#     save_path = Path(save_dir, tixing, "4.manim可处理格式", f"{tixing}_{data_type}_manim可处理格式_part{part:03d}_p{p_version}.json").as_posix()
+#     save_jsonl(samples, save_path, overwrite=True)
 
 
 # 保存解析文本
@@ -399,6 +411,7 @@ if __name__ == "__main__":
     parser.add_argument("--phase1_prompt_version", type=str, default="v2")
     parser.add_argument("--phase2_prompt_version", type=str, default="v2")
     parser.add_argument("--html_template_path", type=str, default="/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/htmlTemplate.html")
+    parser.add_argument("--rendered_ids_path", type=str)
     args = parser.parse_args()
 
     orig_data_paths = [
@@ -460,11 +473,9 @@ if __name__ == "__main__":
             )
         )
     elif args.stage == "获得题目解析文本":
-        rendered_ids_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/5.视频结果/小数单模-立体几何_试标_视频结果_part001_pv2_matched_195/rendered_ids.txt"
-        # samples = get_data_from_split_data(args.save_dir, args.tixing, args.data_type, args.part)
         samples = read_jsonl(orig_split_data_path)
         samples = remove_empty_content_analysis(samples, args.content_key_path, args.analysis_key_path)
-        save_content_analysis_result(samples, args.save_dir, args.tixing, args.data_type, args.part, args.phase2_prompt_version, args.id_key_path, args.analysis_key_path, args.content_key_path, rendered_ids_path)
+        save_content_analysis_result(samples, args.save_dir, args.tixing, args.data_type, args.part, args.phase2_prompt_version, args.id_key_path, args.analysis_key_path, args.content_key_path, args.rendered_ids_path)
     elif args.stage == "转Manim格式":
         run_pipeline(
             pipeline_to_manim_format(
