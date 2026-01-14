@@ -1595,7 +1595,7 @@
          * 适用场景：半径(R)、直径(Φ)、内部高、辅助虚线
          * 特性：文字不旋转，而是根据线条法向偏移，保持水平阅读。
          */
-         function drawDirectLabel(config) {
+         function drawAuxiliaryLabel(config) {
             const {
                 id, p1, p2, text,
                 projectFn = Projections.OBLIQUE,
@@ -1604,7 +1604,7 @@
 
             const s = { ...DEFAULT_ANNOTATION_STYLES, ...styles };
             const svgTarget = (typeof svg !== "undefined" ? svg : window.mainSvg);
-            if (!svgTarget) throw new Error("drawDirectLabel: global svg not found.");
+            if (!svgTarget) throw new Error("drawAuxiliaryLabel: global svg not found.");
 
             const pt1 = projectFn(p1.x, p1.y, p1.z, config);
             const pt2 = projectFn(p2.x, p2.y, p2.z, config);

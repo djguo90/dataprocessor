@@ -7,11 +7,12 @@ import time
 USERNAME = "郭冬杰"
 PASSWORD = "wy7TMap3"
 TASKS = [
-    "资源教育部-辅学-图形化讲解_174_gemini-3-pro-preview-thinking_郭冬杰_1768274045415-小数单模-立体几何_训练集_phase1爬取输入_part001_pv3",
-    "资源教育部-辅学-图形化讲解_175_gemini-3-pro-preview-thinking_郭冬杰_1768274046136-小数单模-立体几何_训练集_phase1爬取输入_part002_pv3",
-    "资源教育部-辅学-图形化讲解_176_gemini-3-pro-preview-thinking_郭冬杰_1768274046857-小数单模-立体几何_训练集_phase1爬取输入_part003_pv3",
-    "资源教育部-辅学-图形化讲解_177_gemini-3-pro-preview-thinking_郭冬杰_1768274047491-小数单模-立体几何_训练集_phase1爬取输入_part004_pv3",
-    "资源教育部-辅学-图形化讲解_178_gemini-3-pro-preview-thinking_郭冬杰_1768274049168-小数单模-立体几何_训练集_phase1爬取输入_part005_pv3",
+    "资源教育部-辅学-图形化讲解_214_gemini-3-pro-preview-thinking_郭冬杰_1768307427079-小数单模-立体几何_试标_phase2爬取输入_part001_p1v4_p2v4",
+    "资源教育部-辅学-图形化讲解_215_gemini-3-pro-preview-thinking_郭冬杰_1768307427995-小数单模-立体几何_训练集_phase2爬取输入_part001_p1v4_p2v4",
+    "资源教育部-辅学-图形化讲解_216_gemini-3-pro-preview-thinking_郭冬杰_1768307429820-小数单模-立体几何_训练集_phase2爬取输入_part002_p1v4_p2v4",
+    "资源教育部-辅学-图形化讲解_217_gemini-3-pro-preview-thinking_郭冬杰_1768307431290-小数单模-立体几何_训练集_phase2爬取输入_part003_p1v4_p2v4",
+    "资源教育部-辅学-图形化讲解_218_gemini-3-pro-preview-thinking_郭冬杰_1768307433299-小数单模-立体几何_训练集_phase2爬取输入_part004_p1v4_p2v4",
+    "资源教育部-辅学-图形化讲解_219_gemini-3-pro-preview-thinking_郭冬杰_1768307435187-小数单模-立体几何_训练集_phase2爬取输入_part005_p1v4_p2v4"
 ]
 SLEEP = 10 * 60
 

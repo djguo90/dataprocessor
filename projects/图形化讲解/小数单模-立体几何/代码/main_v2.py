@@ -109,15 +109,17 @@ def remove_empty_content_analysis(samples, content_key_path, analysis_key_path):
         yield sample
 
 # 组装phase1爬取输入
-def get_phase1_crawl_in(samples, phase1_prompt_path, id_key_path, content_key_path, analysis_key_path):
+def get_phase1_crawl_in(samples, phase1_prompt_path, phase1_correct_prompt_path, id_key_path, content_key_path, analysis_key_path):
     with open(phase1_prompt_path) as reader:
         prompt_template = reader.read().strip()
+    with open(phase1_correct_prompt_path) as reader:
+        correct_prompt_template = reader.read().strip()
     for sample in samples:
         topic_id = get_values_by_key_path(sample, id_key_path)[0]
         content = get_values_by_key_path(sample, content_key_path)[0]
         analysis =  get_values_by_key_path(sample, analysis_key_path)[0]
         prompt = prompt_template.replace("{{question}}", content).replace("{{analysis}}", analysis)
-        yield {"id": topic_id, "query": prompt}
+        yield {"id": topic_id, "query": [prompt, correct_prompt_template]}
 
 # 解析phase1爬取数据
 def parse_phase1_result(samples, orig_samples, content_key_path, id_key_path):
@@ -128,21 +130,31 @@ def parse_phase1_result(samples, orig_samples, content_key_path, id_key_path):
         id2content[sample_id] = content
     for sample in samples:
         sample_id = sample["id"]
+        # if sample_id not in id2content:
+        #     # print(11111)
+        #     continue
+        # print(len(id2content))
         sample_content = id2content[sample_id]
-        sample_answer = sample["answer"]
-        yield {"id": sample_id, "question": sample_content, "phase1_answer": sample_answer}
+        sample_answer = sample["answer"][-1]["content"]
+        try:
+            sample_answer = sample_answer[sample_answer.index("【修改后视频脚本】") + len("【修改后视频脚本】"):].strip()
+            yield {"id": sample_id, "question": sample_content, "phase1_answer": sample_answer}
+        except:
+            continue
 
 
 # 组装phase2爬取数据
-def get_phase2_crawl_in(samples, phase2_prompt_path):
+def get_phase2_crawl_in(samples, phase2_prompt_path, phase2_correct_prompt_path):
     with open(phase2_prompt_path) as reader:
         prompt_template = reader.read().strip()
+    with open(phase2_correct_prompt_path) as reader:
+        correct_prompt_template = reader.read().strip()
     for sample in samples:
         sample_id = sample["id"]
         sample_question = sample["question"]
         sample_phase1_answer = sample["phase1_answer"]
         query = prompt_template.replace("{{question}}", sample_question).replace("{{script}}", sample_phase1_answer)
-        yield {"id":sample_id, "query":query}
+        yield {"id":sample_id, "query":[query, correct_prompt_template]}
 
 
 # # phase2爬取输入保存到文件
@@ -168,14 +180,25 @@ def parse_phase2_result(samples_orig, samples_phase1, samples_phase2, content_ke
         id2content[sample_id] = content
         id2analyse[sample_id] = analyse
     for sample in samples_phase1:
-        id2phase1_answer[sample["id"]] = sample["answer"]
+        id2phase1_answer[sample["id"]] = sample["phase1_answer"]
     for sample in samples_phase2:
         sample_id = sample["id"]
+        # if sample_id not in id2content:
+        #     # print(1111)
+        #     continue
+        # if sample_id not in id2analyse:
+        #     continue
+        # if sample_id not in id2phase1_answer:
+        #     continue
         sample_content = id2content[sample_id]
         sample_analyse = id2analyse[sample_id]
         sample_phase1_answer = id2phase1_answer[sample_id]
-        sample_phase2_answer = sample["answer"]
-        yield {"id": sample_id, "question": sample_content, "analyse": sample_analyse, "phase1_answer": sample_phase1_answer, "phase2_answer": sample_phase2_answer}
+        sample_phase2_answer = sample["answer"][-1]["content"]
+        try:
+            sample_phase2_answer = sample_phase2_answer[sample_phase2_answer.index("【修改后结果】") + len("【修改后结果】"):].strip()
+            yield {"id": sample_id, "question": sample_content, "analyse": sample_analyse, "phase1_answer": sample_phase1_answer, "phase2_answer": sample_phase2_answer}
+        except:
+            continue
 
 # 一阶段过checklist
 def check_list(samples):
@@ -192,6 +215,31 @@ def check_list(samples):
         for step in phase1_answer:
             if not isinstance(step, dict):
                 is_bad = True
+                break
+            if "step" not in step:
+                print(1)
+                is_bad = True
+                break
+            if "type" not in step:
+                print(1)
+                is_bad = True
+                break
+            if "cont" not in step:
+                print(1)
+                is_bad = True
+                break
+            if "mark_cont" not in step:
+                print(1)
+                is_bad = True
+                break
+            if "display_cont" not in step:
+                print(1)
+                is_bad = True
+                break
+            if "visual_guide" not in step:
+                print(1)
+                is_bad = True
+                break
         if is_bad:
             continue
         try:
@@ -232,6 +280,9 @@ def to_manim_format(samples, html_template_path):
             script_matches = re.findall(script_pattern, stage2_html_str)
             # 转换为{数字id: 脚本内容}的字典
             stage2_scripts = {int(step_id): content.strip() for step_id, content in script_matches}
+        # TODO 注意把autoAvoidOverlap(svg)删掉吧
+        for x in stage2_scripts:
+            stage2_scripts[x] = stage2_scripts[x].replace("autoAvoidOverlap(svg);", "").replace("autoAvoidOverlap(svg)", "")
         # print(sample["id"], stage2_scripts)
 
         # ===================== 步骤3：构建讲解字段 =====================
@@ -356,18 +407,18 @@ def save_content_analysis_result(samples, save_dir, tixing, data_type, part, p_v
 
 
 @checkpoint_to_file
-def pipeline_phase1_crawl_input(orig_split_data_path, phase1_prompt_path, id_key_path, content_key_path, analysis_key_path):
+def pipeline_phase1_crawl_input(orig_split_data_path, phase1_prompt_path, phase1_correct_prompt_path, id_key_path, content_key_path, analysis_key_path):
     """
     阶段1：生成爬取输入
     读取 -> 过滤空视频 -> 格式化 -> 生成Prompt
     """
     samples = read_jsonl(orig_split_data_path)
     samples = remove_empty_content_analysis(samples, content_key_path, analysis_key_path)
-    samples = get_phase1_crawl_in(samples, phase1_prompt_path, id_key_path, content_key_path, analysis_key_path)
+    samples = get_phase1_crawl_in(samples, phase1_prompt_path, phase1_correct_prompt_path, id_key_path, content_key_path, analysis_key_path)
     yield from samples
 
 @checkpoint_to_file
-def pipeline_phase2_crawl_input(orig_split_data_path, phase1_crawl_out_path, phase2_prompt_path, id_key_path, content_key_path):
+def pipeline_phase2_crawl_input(orig_split_data_path, phase1_crawl_out_path, phase2_prompt_path, phase2_correct_prompt_path, id_key_path, content_key_path):
     """
     阶段1：生成爬取输入
     读取 -> 过滤空视频 -> 格式化 -> 生成Prompt
@@ -375,7 +426,7 @@ def pipeline_phase2_crawl_input(orig_split_data_path, phase1_crawl_out_path, pha
     samples_orig = read_jsonl(orig_split_data_path)
     samples = read_jsonl(phase1_crawl_out_path)
     samples = parse_phase1_result(samples, samples_orig, content_key_path, id_key_path)
-    samples = get_phase2_crawl_in(samples, phase2_prompt_path)
+    samples = get_phase2_crawl_in(samples, phase2_prompt_path, phase2_correct_prompt_path)
     yield from samples
 
 @checkpoint_to_file
@@ -387,7 +438,10 @@ def pipeline_to_manim_format(orig_split_data_path, phase1_answer_path, phase2_an
     samples_orig = read_jsonl(orig_split_data_path)
     samples_orig = remove_empty_content_analysis(samples_orig, content_key_path, analysis_key_path)
     samples_phase1 = read_jsonl(phase1_answer_path)
+    samples_phase1 = parse_phase1_result(samples_phase1, samples_orig, content_key_path, id_key_path)
     samples_phase2 = read_jsonl(phase2_answer_path)
+    samples_orig = read_jsonl(orig_split_data_path)  # NOTE samples_orig被消费了，需要重新再生成一遍
+    samples_orig = remove_empty_content_analysis(samples_orig, content_key_path, analysis_key_path)
     samples = parse_phase2_result(samples_orig, samples_phase1, samples_phase2, content_key_path, analysis_key_path, id_key_path)
     samples = check_list(samples)
     samples = to_manim_format(samples, html_template_path)
@@ -428,6 +482,9 @@ if __name__ == "__main__":
         phase1_prompt_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/solid_geometry/prompts/prompt_SVG_phase1_v0105.md"
     elif args.phase1_prompt_version == "v3":
         phase1_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase1_v0108.md"
+    elif args.phase1_prompt_version == "v4":
+        phase1_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase1_v0108.md"
+        phase1_correct_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase1_check_v0113.md"
     
     if args.phase2_prompt_version == "v1":
         phase2_prompt_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/solid_geometry/prompts/prompt_SVG_phase2_v0105.md"
@@ -435,13 +492,16 @@ if __name__ == "__main__":
         phase2_prompt_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/solid_geometry/prompts/prompt_SVG_phase2_v0106.md"
     elif args.phase2_prompt_version == "v3":
         phase2_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase2_v0108.md"
+    elif args.phase2_prompt_version == "v4":
+        phase2_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase2_v0108.md"
+        phase2_correct_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase2_check_v0113.md"
     
     orig_split_data_path = Path(args.save_dir, args.tixing, "1.原始数据", f"{args.tixing}_{args.data_type}_原始数据_part{args.part:03d}.json").as_posix()
-    phase1_crawl_in_save_path = Path(args.save_dir, args.tixing, "2.phase1爬取输入", f"{args.tixing}_{args.data_type}_phase1爬取输入_part{args.part:03d}_p{args.phase1_prompt_version}.json").as_posix()
-    phase1_crawl_out_save_path = Path(args.save_dir, args.tixing, "2.phase1爬取输出", f"{args.tixing}_{args.data_type}_phase1爬取输出_part{args.part:03d}_p{args.phase1_prompt_version}.json").as_posix()
-    phase2_crawl_in_save_path = Path(args.save_dir, args.tixing, "3.phase2爬取输入", f"{args.tixing}_{args.data_type}_phase2爬取输入_part{args.part:03d}_p{args.phase2_prompt_version}.json").as_posix()
-    phase2_crawl_out_save_path = Path(args.save_dir, args.tixing, "3.phase2爬取输出", f"{args.tixing}_{args.data_type}_phase2爬取输出_part{args.part:03d}_p{args.phase2_prompt_version}.json").as_posix()
-    manim_save_path = Path(args.save_dir, args.tixing, "4.manim可处理格式", f"{args.tixing}_{args.data_type}_manim可处理格式_part{args.part:03d}_p{args.phase2_prompt_version}.json").as_posix()
+    phase1_crawl_in_save_path = Path(args.save_dir, args.tixing, "2.phase1爬取输入_v2", f"{args.tixing}_{args.data_type}_phase1爬取输入_part{args.part:03d}_p{args.phase1_prompt_version}.json").as_posix()
+    phase1_crawl_out_save_path = Path(args.save_dir, args.tixing, "2.phase1爬取输出_v2", f"{args.tixing}_{args.data_type}_phase1爬取输出_part{args.part:03d}_p{args.phase1_prompt_version}.json").as_posix()
+    phase2_crawl_in_save_path = Path(args.save_dir, args.tixing, "3.phase2爬取输入_v2", f"{args.tixing}_{args.data_type}_phase2爬取输入_part{args.part:03d}_p1{args.phase1_prompt_version}_p2{args.phase2_prompt_version}.json").as_posix()
+    phase2_crawl_out_save_path = Path(args.save_dir, args.tixing, "3.phase2爬取输出_v2", f"{args.tixing}_{args.data_type}_phase2爬取输出_part{args.part:03d}_p1{args.phase1_prompt_version}_p2{args.phase2_prompt_version}.json").as_posix()
+    manim_save_path = Path(args.save_dir, args.tixing, "4.manim可处理格式_v2", f"{args.tixing}_{args.data_type}_manim可处理格式_part{args.part:03d}_p1{args.phase1_prompt_version}_p2{args.phase2_prompt_version}.json").as_posix()
     
     if args.stage == "拆分数据":
         samples = init_data(orig_data_paths)
@@ -454,6 +514,7 @@ if __name__ == "__main__":
             )(
                 orig_split_data_path=orig_split_data_path, 
                 phase1_prompt_path=phase1_prompt_path,
+                phase1_correct_prompt_path=phase1_correct_prompt_path,
                 id_key_path=args.id_key_path, 
                 content_key_path=args.content_key_path, 
                 analysis_key_path=args.analysis_key_path
@@ -468,6 +529,7 @@ if __name__ == "__main__":
                 orig_split_data_path=orig_split_data_path, 
                 phase1_crawl_out_path=phase1_crawl_out_save_path,
                 phase2_prompt_path=phase2_prompt_path,
+                phase2_correct_prompt_path=phase2_correct_prompt_path,
                 id_key_path=args.id_key_path, 
                 content_key_path=args.content_key_path, 
             )

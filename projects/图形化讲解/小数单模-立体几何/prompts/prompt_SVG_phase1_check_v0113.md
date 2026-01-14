@@ -1,4 +1,4 @@
-视频脚本 visual_guide 检查与修改规范
+帮我检查并修改生成的视频脚本，重点关注visual_guide字段
 
 一、 核心检查要求（必遵守）
 
@@ -40,5 +40,5 @@
 
 【修改后视频脚本】
 
-<JSON>xxx</JSON>（修改后脚本内容，以JSON格式呈现）
+<JSON>xxx</JSON>
 <JSON>xxx</JSON>
