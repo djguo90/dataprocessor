@@ -139,7 +139,7 @@ def _render_plain_text_fallback(text: str, output_path: Path, dpi: int, figsize,
         return False
 
 
-def latex_to_image(latex_str, output_path, dpi=300, figsize=(8, 4), fontsize=16) -> bool:
+def latex_to_image(latex_str, output_path, dpi=100, figsize=(8, 4), fontsize=16) -> bool:
     """
     首选：XeLaTeX 渲染中文+公式为 PNG。
     如果 xelatex 编译失败：自动退化为“普通文本渲染”（不解析 LaTeX）。

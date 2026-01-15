@@ -157,16 +157,6 @@ def get_phase2_crawl_in(samples, phase2_prompt_path, phase2_correct_prompt_path)
         yield {"id":sample_id, "query":[query, correct_prompt_template]}
 
 
-# # phase2爬取输入保存到文件
-# def save_phase2_crawl_in_result(samples, save_dir, tixing, data_type, part, p_version):
-#     save_path = Path(save_dir, tixing, "3.phase2爬取输入", f"{tixing}_{data_type}_phase2爬取输入_part{part:03d}_p{p_version}.json").as_posix()
-#     save_jsonl(samples, save_path)
-
-# # 读取phase2爬取输出
-# def read_phase2_crawl_out(save_dir, tixing, data_type, part, p_version):
-#     save_path = Path(save_dir, tixing, "3.phase2爬取输出", f"{tixing}_{data_type}_phase2爬取输出_part{part:03d}_p{p_version}.json").as_posix()
-#     yield from read_jsonl(save_path)
-
 # 解析phase2爬取输出
 def parse_phase2_result(samples_orig, samples_phase1, samples_phase2, content_key_path, analyse_key_path, id_key_path):
     id2content = {}
@@ -363,18 +353,10 @@ def to_manim_format(samples, html_template_path):
         sample["answer"] = target_format
         yield sample
 
-# # 保存可以处理的格式
-# def save_manim_format_result(samples, save_dir, tixing, data_type, part, p_version):
-#     save_path = Path(save_dir, tixing, "4.manim可处理格式", f"{tixing}_{data_type}_manim可处理格式_part{part:03d}_p{p_version}.json").as_posix()
-#     save_jsonl(samples, save_path, overwrite=True)
-
 
 # 保存解析文本
-def save_content_analysis_result(samples, save_dir, tixing, data_type, part, p_version, id_key_path, analysis_key_path, content_key_path, include_id_path):
-    from PIL import Image, ImageDraw, ImageFont
-    import textwrap
-    save_dir = Path(save_dir, tixing, "6.题目与解析图片", f"{tixing}_{data_type}_题目与解析图片_part{int(part):03d}_p{p_version}")
-    save_dir.mkdir(exist_ok=True, parents=True)
+def save_content_analysis_result(samples, save_dir, id_key_path, analysis_key_path, content_key_path, include_id_path):
+    Path(save_dir).mkdir(exist_ok=True, parents=True)
     with open(include_id_path) as reader:
         include_ids = set([x.strip() for x in reader])
     for sample in samples:
@@ -383,27 +365,10 @@ def save_content_analysis_result(samples, save_dir, tixing, data_type, part, p_v
             continue
         sample_analysis = get_values_by_key_path(sample, analysis_key_path)[0]
         sample_content = get_values_by_key_path(sample, content_key_path)[0]
-        save_path_analysis = save_dir / f"{sample_id}_1.png"
-        save_path_content = save_dir / f"{sample_id}_2.png"
-
-        # # 创建一个新的白色图片
-        # image = Image.new('RGB', (550, 400), color = (255, 255, 255))
-
-        # # 获取一个可以在图片上绘制的对象
-        # draw = ImageDraw.Draw(image)
-
-        # # 设置字体和大小（需要事先下载字体文件，例如arial.ttf）
-        # font = ImageFont.truetype("/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/代码/AlibabaPuHuiTi-3-35-Thin/AlibabaPuHuiTi-3-35-Thin.ttf", 12)
-
-        # # 在图片上绘制文本
-        # wrapped_lines = textwrap.wrap(sample_analysis, width=40)
-        # wrapped_text = '\n'.join(wrapped_lines)
-        # draw.text((10,10), wrapped_text, fill=(0,0,0), font=font)
+        save_path_analysis = Path(save_dir) / f"{sample_id}-1.png"
+        save_path_content = Path(save_dir) / f"{sample_id}-2.png"
         latex_to_image(sample_analysis, save_path_analysis)
         latex_to_image(sample_content, save_path_content)
-
-        # 保存图片
-        # image.save(save_path)
 
 
 @checkpoint_to_file
@@ -502,7 +467,7 @@ if __name__ == "__main__":
     phase2_crawl_in_save_path = Path(args.save_dir, args.tixing, "3.phase2爬取输入_v2", f"{args.tixing}_{args.data_type}_phase2爬取输入_part{args.part:03d}_p1{args.phase1_prompt_version}_p2{args.phase2_prompt_version}.json").as_posix()
     phase2_crawl_out_save_path = Path(args.save_dir, args.tixing, "3.phase2爬取输出_v2", f"{args.tixing}_{args.data_type}_phase2爬取输出_part{args.part:03d}_p1{args.phase1_prompt_version}_p2{args.phase2_prompt_version}.json").as_posix()
     manim_save_path = Path(args.save_dir, args.tixing, "4.manim可处理格式_v2", f"{args.tixing}_{args.data_type}_manim可处理格式_part{args.part:03d}_p1{args.phase1_prompt_version}_p2{args.phase2_prompt_version}.json").as_posix()
-    
+    content_analysis_save_dir = Path(args.save_dir, args.tixing, "6.题目与解析图片_v2", f"{args.tixing}_{args.data_type}_题目与解析图片_part{int(args.part):03d}_p1{args.phase1_prompt_version}_p2{args.phase2_prompt_version}").as_posix()
     if args.stage == "拆分数据":
         samples = init_data(orig_data_paths)
         split_data(samples, args.test_count, args.other_count, args.n_test_part, args.save_dir, args.tixing)
@@ -537,7 +502,7 @@ if __name__ == "__main__":
     elif args.stage == "获得题目解析文本":
         samples = read_jsonl(orig_split_data_path)
         samples = remove_empty_content_analysis(samples, args.content_key_path, args.analysis_key_path)
-        save_content_analysis_result(samples, args.save_dir, args.tixing, args.data_type, args.part, args.phase2_prompt_version, args.id_key_path, args.analysis_key_path, args.content_key_path, args.rendered_ids_path)
+        save_content_analysis_result(samples, content_analysis_save_dir, args.id_key_path, args.analysis_key_path, args.content_key_path, args.rendered_ids_path)
     elif args.stage == "转Manim格式":
         run_pipeline(
             pipeline_to_manim_format(
