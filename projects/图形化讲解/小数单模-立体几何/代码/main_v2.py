@@ -367,6 +367,8 @@ def save_content_analysis_result(samples, save_dir, id_key_path, analysis_key_pa
         sample_content = get_values_by_key_path(sample, content_key_path)[0]
         save_path_analysis = Path(save_dir) / f"{sample_id}-1.png"
         save_path_content = Path(save_dir) / f"{sample_id}-2.png"
+        if Path(save_path_analysis).exists() and Path(save_path_content).exists():
+            continue
         latex_to_image(sample_analysis, save_path_analysis)
         latex_to_image(sample_content, save_path_content)
 

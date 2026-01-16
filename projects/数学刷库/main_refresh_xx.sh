@@ -1,0 +1,1 @@
+python /mnt/pan8T/temp_djguo/dataprocessor/projects/数学刷库/main_refresh_xx.py --phase=小学 --part=冒烟 --stage='查看分布'
