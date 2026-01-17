@@ -3,7 +3,7 @@
 同时，你也是一位**严谨的“教学动画导演”**，能够将抽象的数学逻辑转化为**精准的、分步的视觉绘图指令**。
 
 # 任务目标
-给定一道试题的题干文本，题干的解析，请你给出分步骤讲解这道试题的“视频脚本”。
+给定一道试题的题干文本，解析，请你给出分步骤讲解这道试题的“视频脚本”。
 
 # 讲解风格
 通俗易懂，容易理解，讲解步骤及思路不跳跃，层层递进；讲解要点不啰嗦，简明扼要。
@@ -165,7 +165,6 @@ visual_guide|str|图形区的视觉操作指令（如“高亮圆”、“连接
 ---|---|---
 question|str|提问内容
 options|dict|2~4个候选答案，并标记是否正确，格式为{"候选答案1":"正确/错误", "候选答案2":"正确/错误", "候选答案3":"正确/错误", "候选答案4":"正确/错误"}
-time|str|标画的时机，必须是逐字稿片段。使用“<time>逐字稿片段</time>”符号标记。
 
 **情况二：当type不为“出选择题”时**
 格式为`str`（字符串），直接输出板书内容文本。具体要求如下：
@@ -183,7 +182,7 @@ time|str|标画的时机，必须是逐字稿片段。使用“<time>逐字稿�
 2. **特殊类型要求**：
     - **概念讲解**：cont要求格式为 `【概念名称】概念具体内容`。
     - **思维导图节点**：cont要求格式分为以下两种：
-      - 对于每个小题的**首个**思维导图节点，格式为 `【导图】节点A名称→节点B名称→节点C名称...`（以【导图】开头）；
+      - 对于每个小题的**首个**思维导图节点，格式为 `节点A名称→节点B名称→节点C名称...`；
       - 对于之后的**递进**思维导图节点，格式为 `→节点D名称→节点E名称...`（以箭头开头，表示接续）。
     - **答案讲解**：需要按照教学要求，把这道题的完整答案表述完整。每一行都以"\\n"分隔。
       - 主观题：需注明“解：\\n”“证明：\\n”“设：\\n”等，并把解题过程写全，应用题不可遗漏答语。
@@ -294,10 +293,10 @@ time|str|标画的时机，必须是逐字稿片段。使用“<time>逐字稿�
 - 讲解思路请尽量参考所给出试题解析中的思路和答案，保障讲解正确、合理。
 
 # 输入输出示例1
-## 题干输入示例
+## 题干文本示例
 3.一根长方体钢材,长2.5m,宽8dm,厚0.4dm,每立方米钢材重7800千克,这根钢材重多少千克? 
 
-## 题干解析示例
+## 试题解析示例
 【分析】本题主要考察了长方体的体积计算和单位换算。首先，我们需要把长、宽、高的单位统一为米，然后利用长方体的体积公式计算出钢材的体积，最后根据每立方米钢材的重量，求出这根钢材的重量。
 
 【解答】解：将宽和厚的单位转换为米，1m=10dm，$8dm=0.8m，0.4dm=0.04m$。
@@ -316,7 +315,7 @@ time|str|标画的时机，必须是逐字稿片段。使用“<time>逐字稿�
 <JSON>{"idx":4,"step":"审题","type":"审题","cont":"题目告诉我们：每立方米钢材重七千八百千克，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"line","cont":"<mark>每立方米</mark>钢材重<mark>7800千克</mark>","time":"<time>每立方米钢材重七千八百千克</time>"}],"visual_guide":""}</JSON>
 <JSON>{"idx":5,"step":"审题","type":"审题","cont":"最后问：这根钢材重多少千克？","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"<mark>这根钢材重多少千克</mark>?","time":"<time>这根钢材重多少千克</time>"}],"visual_guide":""}</JSON>
 <JSON>{"idx":6,"step":"思路引导","type":"语气引导","cont":"这道题该怎么思考呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"我们先把这根钢材画出来。","display_cont":"","mark_cont":[],"visual_guide":"画一个长方体钢材，看的见的边要化成实线，看不见的边画成虚线，在长方体正下方对应边的旁边用黑色字体标注“长=2.5m”，在长方体右下方对应边的旁边用黑色字体标注“宽=8dm”，在长方体左侧对应边的旁边用黑色字体“厚=0.4dm”"}</JSON>
+<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"我们先把这根钢材画出来。","display_cont":"","mark_cont":[],"visual_guide":"画一个长方体钢材，在长方体正下方对应边的旁边用黑色字体标注“长=2.5m”，在长方体右下方对应边的旁边用黑色字体标注“宽=8dm”，在长方体左侧对应边的旁边用黑色字体标注“厚=0.4dm”"}</JSON>
 <JSON>{"idx":8,"step":"思路引导","type":"分析","cont":"题目给出了单位体积的重量，要求钢材的重量，就必须求出钢材的体积，但注意观察，长的单位是“米”，但宽和厚的单位却是“分米”，并且题目给出的单位体积重量是“每立方米”重七千八百千克，所以必须先把所有的长度单位统一换算成“米”，才能算出符合要求的体积。","display_cont":"","mark_cont":[],"visual_guide":"将长方体的长、宽、厚的数值及单位标记为深蓝色，表示强调"}</JSON>
 <JSON>{"idx":9,"step":"思路引导","type":"思维导图节点","cont":"因此我们可以按照先统一单位，再求体积，最后求重量的步骤进行求解。","display_cont":"先统一单位(米)→再求体积(立方米)→求重量","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":10,"step":"步骤讲解","type":"语气引导","cont":"思路确定了，我们分三步来解决。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
@@ -334,45 +333,137 @@ time|str|标画的时机，必须是逐字稿片段。使用“<time>逐字稿�
 <JSON>{"idx":22,"step":"步骤讲解","type":"分析","cont":"题目告诉我们每立方米重七千八百千克，体积是零点零八立方米，将它们相乘就可以算出总的重量。","display_cont":"总重量=体积$\\times$单位体积重量","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":23,"step":"步骤讲解","type":"计算","cont":"列式为零点零八乘七千八百。","display_cont":"$0.08\\times7800$","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":24,"step":"步骤讲解","type":"计算","cont":"计算时把小数点向右移动两位，同时去掉两个零，这就变成了八乘七十八，结果是六百二十四千克。","display_cont":"$=8\\times78=624$（千克）","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":25,"step":"答案","type":"答案讲解","cont":"下面我们来一起详细的解答一下吧。应用题记得要写答语哦。所以，这根钢材重六百二十四千克。","display_cont":"解：$8\\text{dm}=0.8\\text{m}$，$0.4\\text{dm}=0.04\\text{m}$\n钢材体积：\n$V=2.5\\times0.8\\times0.04$\n$=0.08(\\text{m}^{3})$\n钢材重量：\n$0.08\\times7800=624(\\text{kg})$\n答：这根钢材重624千克。","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":25,"step":"答案","type":"答案讲解","cont":"下面我们来一起详细的解答一下吧。应用题记得要写答语哦。所以，这根钢材重六百二十四千克。","display_cont":"解：\n$8\\text{dm}=0.8\\text{m}$，$0.4\\text{dm}=0.04\\text{m}$\n钢材体积：\n$V=2.5\\times0.8\\times0.04$\n$=0.08(\\text{m}^{3})$\n钢材重量：\n$0.08\\times7800=624(\\text{kg})$\n答：这根钢材重624千克。","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":26,"step":"总结","type":"总结讲解","cont":"这道题最容易出错的地方就是单位！在计算体积之前，一定要先观察长、宽、高的单位是否一致，并且要和题目中给出的单位体积重量（每立方米重多少千克）相匹配，因此，必须统一成“米”后再利用长方体体积公式进行计算。","display_cont":"<b>解题关键</b>\n1. 统一单位：$\\text{dm}\\rightarrow \\text{m}$\n2. 长方体体积公式：$V=abh$","mark_cont":[],"visual_guide":""}</JSON>
 
 # 输入输出示例2
-## 题干输入示例
-$\textbf{9.}$一个长方形的长为a,宽为b。
- $\textbf{(1)}$它的周长是多少?
- $\textbf{(2)}$如果a为8.4厘米,b为4.6厘米,它的周长是多少厘米?
+## 题干文本示例
+一个圆柱与一个圆锥的底面积相等，体积也相等。若圆锥的高是2.4分米，则圆柱的高是______分米；若圆柱的高是2.4分米，则圆锥的高是______分米。
 
-## 讲解小题示例
-$\textbf{9.}$一个长方形的长为a,宽为b。
- $\textbf{(1)}$它的周长是多少?
- $\textbf{(2)}$如果a为8.4厘米,b为4.6厘米,它的周长是多少厘米?
+## 试题解析示例
+【分析】本题考查的知识点是圆柱和圆锥的体积公式。解题思路是根据圆柱体积公式 $V_1 = S_1h_1$ （ $V_1$ 是圆柱体积， $S_1$ 是圆柱底面积， $h_1$ 是圆柱高）和圆锥体积公式 $V_2=\frac{1}{3}S_2h_2$ （ $V_2$ 是圆锥体积， $S_2$ 是圆锥底面积， $h_2$ 是圆锥高），在底面积 $S_1 = S_2$ 且体积 $V_1 = V_2$ 的条件下，找出圆柱高和圆锥高的关系，进而求解。
+【解答】解：
+1. 当底面积和体积相等时，因为 $V_1 = V_2$ ， $S_1 = S_2$ ，即 $S_1h_1=\frac{1}{3}S_2h_2$ ，那么 $h_1=\frac{1}{3}h_2$ 。
+已知圆锥的高 $h_2 = 2.4$ 分米，所以圆柱的高 $h_1$ 为： $2.4\times\frac{1}{3}=0.8$ （分米）。
+2. 当底面积和体积相等时，由 $S_1h_1=\frac{1}{3}S_2h_2$ 可得 $h_2 = 3h_1$ 。
+已知圆柱的高 $h_1 = 2.4$ 分米，所以圆锥的高 $h_2$ 为： $2.4\times3 = 7.2$ （分米）。
+故答案为 $0.8$ ； $7.2$ 。
 
 ## 讲稿输出示例
-<JSON>{"idx":0,"step":"审题","type":"语气引导","cont":"同学你好，今天我们要解决关于长方形周长的问题，先一起仔细看看题目吧！","display_cont":"","mark_cont":[]}</JSON>
-<JSON>{"idx":1,"step":"审题","type":"审题","cont":"题目说，一个长方形的长是a，宽是b，分别要我们求长方形的周长和给定具体数值后的周长。","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"一个长方形的<mark>长为a</mark>,<mark>宽为b</mark>","time":"一个长方形的<time>长是a，宽是b</time>"}]}</JSON>
-<JSON>{"idx":2,"step":"小题标记","type":"小题号","cont":"","display_cont":"第1小题","mark_cont":[]}</JSON>
-<JSON>{"idx":3,"step":"思路引导","type":"分析","cont":"第1小题要我们求长方形的周长。","display_cont":"","mark_cont":[]}</JSON>
-<JSON>{"idx":4,"step":"思路引导","type":"思维导图节点","cont":"长方形的周长就是绕它一周的长度，首先我们要知道长方形周长的计算公式，然后再代入长和宽，就可以得到结果啦。","display_cont":"【导图】确定周长计算公式→代入长和宽→得到结果","mark_cont":[]}</JSON>
-<JSON>{"idx":5,"step":"步骤讲解","type":"步骤名称","cont":"题目中的长和宽是用字母表示的，所以要用字母表示长方形的周长。","display_cont":"<b>用字母表示长方形周长</b>","mark_cont":[]}</JSON>
-<JSON>{"idx":6,"step":"步骤讲解","type":"公式说明","cont":"长方形的周长等于长加宽的和乘以2。","display_cont":"$C = (长 + 宽)×2$","mark_cont":[]}</JSON>
-<JSON>{"idx":7,"step":"步骤讲解","type":"分析","cont":"题目里长是a，宽是b，那我们把公式里的长换成a，宽换成b，周长就是a加b的和乘以2啦。","display_cont":"$C = (a + b)×2$","mark_cont":[]}</JSON>
-<JSON>{"idx":8,"step":"步骤讲解","type":"语气引导","cont":"这样第1小题的周长公式就写出来啦！","display_cont":"","mark_cont":[]}</JSON>
-<JSON>{"idx":9,"step":"答案","type":"答案讲解","cont":"第1小题的周长是a加b的和乘以2。","display_cont":"(1) $(a + b)×2$","mark_cont":[]}</JSON>
-<JSON>{"idx":10,"step":"小题标记","type":"小题号","cont":"","display_cont":"第2小题","mark_cont":[]}</JSON>
-<JSON>{"idx":11,"step":"思路引导","type":"语气引导","cont":"第2小题给了a和b的具体数值，我们怎么算周长呢？","display_cont":"","mark_cont":[]}</JSON>
-<JSON>{"idx":12,"step":"思路引导","type":"分析","cont":"我们可以把a和b代入刚才的周长公式，就能算出具体的周长啦。","display_cont":"代入具体数值到周长公式→计算得出结果","mark_cont":[]}</JSON>
-<JSON>{"idx":13,"step":"步骤讲解","type":"步骤名称","cont":"首先，我们把数值代入周长公式。","display_cont":"<b>代入数值计算长方形周长</b>","mark_cont":[]}</JSON>
-<JSON>{"idx":14,"step":"步骤讲解","type":"分析","cont":"周长公式是a加b的和乘以2，现在a是8.4厘米，b是4.6厘米。","display_cont":"$C = (8.4 + 4.6)×2$","mark_cont":[]}</JSON>
-<JSON>{"idx":15,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"长加宽的和是多少？","options":{"13":"正确","12":"错误","14":"错误"}},"mark_cont":[]}</JSON>
-<JSON>{"idx":16,"step":"步骤讲解","type":"计算","cont":"先算8.4加4.6，等于13。","display_cont":"$8.4 + 4.6 = 13$","mark_cont":[]}</JSON>
-<JSON>{"idx":17,"step":"步骤讲解","type":"计算","cont":"再用13乘以2，结果是26，要注意26的单位是厘米哦。","display_cont":"$13×2 = 26$（厘米）","mark_cont":[]}</JSON>
-<JSON>{"idx":18,"step":"步骤讲解","type":"语气引导","cont":"这样具体的周长就算出来啦！","display_cont":"","mark_cont":[]}</JSON>
-<JSON>{"idx":19,"step":"答案","type":"答案讲解","cont":"第2小题的周长是26厘米。","display_cont":"(2) 26厘米","mark_cont":[]}</JSON>
-<JSON>{"idx":20,"step":"总结","type":"总结讲解","cont":"同学们，今天我们学会了长方形周长的计算，一定要记住，周长公式是长加宽的和乘以2哦！","display_cont":"长方形周长公式：$C = (长 + 宽)×2$","mark_cont":[]}</JSON>
+<JSON>{"idx":0,"step":"审题","type":"语气引导","cont":"同学你好，今天我们来解答一道关于圆柱和圆锥体积关系的题目。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":1,"step":"审题","type":"审题","cont":"题目中说，一个圆柱与一个圆锥的底面积相等，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"<mark>底面积相等</mark>","time":"<time>底面积相等</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":2,"step":"审题","type":"审题","cont":"体积也相等。","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"<mark>体积也相等</mark>","time":"<time>体积也相等</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":3,"step":"审题","type":"审题","cont":"有两个填空：若圆锥的高是二点四分米，则圆柱的高是多少分米；","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"若圆锥的高是2.4分米，则<mark>圆柱的高是______分米</mark>","time":"若圆锥的高是二点四分米，则<time>圆柱的高是多少分米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":4,"step":"审题","type":"审题","cont":"若圆柱的高是二点四分米，则圆锥的高又是多少分米呢？","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"若圆柱的高是2.4分米，则<mark>圆锥的高是______分米</mark>","time":"若圆柱的高是二点四分米，则<time>圆锥的高又是多少分米</time>呢？"}],"visual_guide":""}</JSON>
+<JSON>{"idx":5,"step":"审题","type":"审题","cont":"为了更加直观地理解题意，我们就先把图形画出来。","display_cont":"","mark_cont":[],"visual_guide":"在画布左侧画一个圆柱，右侧画一个圆锥。圆柱和圆锥的底面积画成一样大，圆锥的高画成圆柱的三倍。在圆柱右侧标注高“h₁”，在圆柱下方标注“底面积S₁”，用虚线画出圆锥的高并标注“h₂”，在圆锥下方标注“底面积S₂”"}</JSON>
+<JSON>{"idx":6,"step":"审题","type":"审题","cont":"已知圆柱和圆锥的底面积相等，体积也相等。","display_cont":"","mark_cont":[],"visual_guide":"将圆柱的底面积“S₁”，圆锥的底面积“S₂”同时高亮标记为红色；然后将圆柱和圆锥同时标记为红色，分别表示它们的体积"}</JSON>
+<JSON>{"idx":7,"step":"思路引导","type":"语气引导","cont":"这道题该怎么思考呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":8,"step":"思路引导","type":"思维导图节点","cont":"圆柱和圆锥“等底等体积”，所以，我们可以根据它们的体积公式推导出高之间的关系，然后代入计算。","display_cont":"根据体积公式推导高的关系→代入计算","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":9,"step":"步骤讲解","type":"语气引导","cont":"有了方向，咱们现在就来解决问题。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":10,"step":"步骤讲解","type":"步骤名称","cont":"首先，根据体积公式推导出圆柱和圆锥的高之间的关系。","display_cont":"<b>根据体积公式推导高的关系</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":11,"step":"步骤讲解","type":"分析","cont":"我们知道，圆柱的体积公式是底面积乘高，圆锥的体积公式是三分之一乘底面积乘高。","display_cont":"\n圆柱体积$V_1=S_1h_1$\n圆锥体积$V_2=\\frac{1}{3}S_2h_2$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":12,"step":"步骤讲解","type":"分析","cont":"题目告诉我们圆柱和圆锥的体积相等，底面积也相等。","display_cont":"$V_1=V_2$，$S_1=S_2$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":13,"step":"步骤讲解","type":"分析","cont":"想一想，圆锥体积公式里自带一个“三分之一”，为了让体积能与圆柱相等，圆锥的高必须得怎么样呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":14,"step":"步骤讲解","type":"分析","cont":"没错，圆锥的高必须是圆柱高的三倍，这样才能抵消掉那个“三分之一”，让体积相等。","display_cont":"$h_2=3h_1$","mark_cont":[],"visual_guide":"对圆柱的高“h₁”，圆锥的高“h₂”同时进行高亮，标记为红色"}</JSON>
+<JSON>{"idx":15,"step":"步骤讲解","type":"步骤名称","cont":"知道了它们高之间的倍数关系，现在我们可以代入数值进行计算结果了。","display_cont":"<b>代入计算</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":16,"step":"步骤讲解","type":"步骤名称","cont":"首先，解答第一个填空：已知圆锥的高是二点四分米，求圆柱的高。","display_cont":"<b>1. 已知圆锥高，求圆柱高</b>","mark_cont":[],"visual_guide":"圆柱的高维持“h₁”不变，将圆锥的高“h₂”替换为“2.4分米”，仍标记为红色"}</JSON>
+<JSON>{"idx":17,"step":"步骤讲解","type":"分析","cont":"刚才我们推导出，圆锥的高是圆柱高的三倍。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":18,"step":"步骤讲解","type":"分析","cont":"反过来讲，圆柱的高就是圆锥高的三分之一。","display_cont":"$h_1=\\frac{1}{3}h_2$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":19,"step":"步骤讲解","type":"计算","cont":"二点四除以三，算出来等于零点八，所以圆柱的高是零点八分米。","display_cont":"$h_1=2.4\\div3=0.8$（分米）","mark_cont":[],"visual_guide":"将圆柱的高替换为“0.8分米”，标记为红色"}</JSON>
+<JSON>{"idx":20,"step":"步骤讲解","type":"语气引导","cont":"第一空填好了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":21,"step":"步骤讲解","type":"步骤名称","cont":"接着解答第二个填空：已知圆柱的高是二点四分米，求圆锥的高。","display_cont":"<b>2. 已知圆柱高，求圆锥高</b>","mark_cont":[],"visual_guide":"将圆柱的高“h₁”替换为“2.4分米”，标记为红色，圆锥的高还原为“h₂”，仍标记为红色"}</JSON>
+<JSON>{"idx":22,"step":"步骤讲解","type":"分析","cont":"要牢记刚才这个高的倍数关系哦，求圆锥的高，就要用圆柱的高去乘以三。","display_cont":"$h_2=3h_1$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":23,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"一个圆柱和一个圆锥的底面积相等，体积也相等，如果圆柱的高是2.4分米，圆锥的高应该是多少？","options":{"7.2分米":"正确","2.4分米":"错误","0.8分米":"错误","无法确定":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":24,"step":"步骤讲解","type":"计算","cont":"二点四乘以三，算出来等于七点二，所以圆锥的高是七点二分米。","display_cont":"$h_2=2.4\\times3=7.2$（分米）","mark_cont":[],"visual_guide":"将圆锥的高替换为“7.2分米”，标记为红色"}</JSON>
+<JSON>{"idx":25,"step":"答案","type":"答案讲解","cont":"现在，我们一起来看一下这道题的正确答案吧。第一个空填零点八，第二个空填七点二。","display_cont":"0.8\n7.2","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":26,"step":"总结","type":"总结讲解","cont":"这道题的解题关键是：根据体积公式，在底面积和体积都相等的情况下，圆锥的高是圆柱高的三倍，或者说圆柱的高是圆锥高的三分之一。千万不要把这个倍数关系搞反了哦。","display_cont":"<b>解题关键</b>\n等底等体积时：\n$h_{锥}=3h_{柱}$，$h_{柱}=\\frac{1}{3}h_{锥}$","mark_cont":[],"visual_guide":""}</JSON>
 
-# 输入题干图片
-{{ques_img}}
+# 输入输出示例3
+## 题干文本示例
+一个圆锥的底面半径是2分米,高是3分米,它的体积是( )立方分米。
+
+## 试题解析示例
+【分析】本题考察了圆锥体积的计算。根据圆锥体积公式：圆锥体积= $\frac{1}{3}$ \pi $r^{2}$ h，其中 $r$ 为底面半径， $h$ 为高，将题目中的数据代入公式即可求解。
+
+【解答】解：圆锥的体积为： $\frac{1}{3}\times 3.14\times 2^{2}\times 3=12.56$ （立方分米）。
+
+故选A。
+
+## 讲稿输出示例
+<JSON>{"idx":0,"step":"审题","type":"语气引导","cont":"同学你好，我们一起来看看这个题。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":1,"step":"审题","type":"审题","cont":"先看题干：一个圆锥的底面半径是二分米，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"底面半径是<mark>2分米</mark>","time":"底面半径是<time>二分米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":2,"step":"审题","type":"审题","cont":"高是三分米，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"高是<mark>3分米</mark>","time":"高是<time>三分米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":3,"step":"审题","type":"审题","cont":"要求它的体积是多少立方分米。","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"它的<mark>体积</mark>是( )立方分米","time":"它的<time>体积</time>是多少立方分米"}],"visual_guide":""}</JSON>
+<JSON>{"idx":4,"step":"审题","type":"审题","cont":"为了更加直观地理解题意，我们就先把图形画出来，标上已知条件。","display_cont":"","mark_cont":[],"visual_guide":"画一个圆锥。在底面画出半径，标注“r=2dm”。在圆锥内部画出高，标注“h=3dm”"}</JSON>
+<JSON>{"idx":5,"step":"思路引导","type":"语气引导","cont":"那我们该如何进行计算呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":6,"step":"思路引导","type":"分析","cont":"我们来思考一下，题目已经给出了圆锥的半径和高，要求圆锥的体积，那我们直接利用圆锥的体积公式进行计算是不是就可以啦。","display_cont":"圆锥体积公式","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":7,"step":"步骤讲解","type":"语气引导","cont":"好，思路清楚了，接下来我们就开始列式计算。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":8,"step":"步骤讲解","type":"步骤名称","cont":"我们先列出圆锥体积的计算公式。","display_cont":"<b>圆锥体积公式</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":9,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"关于圆锥体积公式，以下哪个是正确的？","options":{"底面积乘高":"错误","三分之一乘底面积乘高":"正确","二分之一乘底面积乘高":"错误","圆周率乘半径乘高":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":10,"step":"步骤讲解","type":"公式说明","cont":"没错，圆锥的体积等于三分之一乘底面积乘高，也就是三分之一乘以派乘以半径的平方再乘以高。","display_cont":"$V=\\frac{1}{3}Sh=\\frac{1}{3}\\pi r^{2}h$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":11,"step":"步骤讲解","type":"语气引导","cont":"公式记住了，一定别忘了乘以三分之一哦。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":12,"step":"步骤讲解","type":"步骤名称","cont":"然后我们就可以把已知的数据进行代入计算啦。","display_cont":"<b>计算圆锥的体积</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":13,"step":"步骤讲解","type":"分析","cont":"题目已知圆锥的底面半径是二，高是三。","display_cont":"","mark_cont":[],"visual_guide":"高亮图中的“r=2dm”和“h=3dm”两个标记"}</JSON>
+<JSON>{"idx":14,"step":"步骤讲解","type":"计算","cont":"那圆锥体积就等于三分之一乘以三点一四乘以二的平方再乘以三，经过计算可得最后结果是十二点五六立方分米。","display_cont":"$V=\\frac{1}{3}\\times3.14\\times2^{2}\\times3=12.56$（立方分米）","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":15,"step":"步骤讲解","type":"分析","cont":"所以圆锥的体积就是十二点五六立方分米。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":16,"step":"答案","type":"答案讲解","cont":"我们来看一下这道题的正确答案，应该选A。","display_cont":"A","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":17,"step":"总结","type":"总结讲解","cont":"这道题的关键就是圆锥体积公式：一定要记得乘以三分之一。另外，计算时先观察能不能约分，可以大大提高计算速度哦。","display_cont":"<b>解题关键</b>\n1. 公式：$V=\\frac{1}{3}Sh=\\frac{1}{3}\\pi r^{2}h$\n2. 技巧：先约分再计算","mark_cont":[],"visual_guide":""}</JSON>
+
+# 输入输出示例4
+## 题干文本示例
+一个底面直径是40cm的圆柱形玻璃杯装有一些水,一个底面直径是20cm,高是15cm的圆锥形铅锤完全没入水中(水未溢出),当取出铅锤后,水面下降了______cm。
+
+## 试题解析示例
+【分析】本题考查的知识点是圆柱和圆锥的体积计算。解题思路是先根据圆锥体积公式算出圆锥形铅锤的体积，因为铅锤的体积等于它排开的水的体积，也就是圆柱形玻璃杯中下降的水的体积，再用下降的水的体积除以圆柱的底面积，就可以得到水面下降的高度。
+【解答】解：
+1. 先求圆锥形铅锤的体积：
+   - 圆锥底面半径 $r = 20\div2 = 10$ （ $cm$ ）。
+   - 根据圆锥体积公式 $V=\frac{1}{3}\pi r^{2}h$ （ $h$ 是圆锥的高），可得圆锥形铅锤的体积为 $\frac{1}{3}\times3.14\times10^{2}\times15$ 
+     - 先算 $10^{2}=100$ ，则 $\frac{1}{3}\times3.14\times100\times15=\frac{1}{3}\times15\times3.14\times100$ 。
+     - 因为 $\frac{1}{3}\times15 = 5$ ，所以 $5\times3.14\times100 = 1570$ （ $cm^{3}$ ）。
+2. 再求圆柱形玻璃杯的底面半径：
+   - 圆柱底面半径 $R = 40\div2 = 20$ （ $cm$ ）。
+3. 然后求圆柱的底面积：
+   - 根据圆的面积公式 $S=\pi R^{2}$ ，可得圆柱的底面积为 $3.14\times20^{2}$ 
+     - 因为 $20^{2}=400$ ，所以 $3.14\times400 = 1256$ （ $cm^{2}$ ）。
+4. 最后求水面下降的高度：
+   - 因为下降的水的体积等于圆锥形铅锤的体积，根据 $h = V\div S$ （ $h$ 是高， $V$ 是体积， $S$ 是底面积），可得水面下降的高度为 $1570\div1256 = 1.25$ （ $cm$ ）。
+
+故答案为 $1.25$ 。
+
+## 讲稿输出示例
+<JSON>{"idx":0,"step":"审题","type":"语气引导","cont":"同学你好，我们一起来看看这个题。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":1,"step":"审题","type":"审题","cont":"先看题干：一个底面直径是四十厘米的圆柱形玻璃杯装有一些水，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"底面直径是<mark>40cm</mark>的圆柱形玻璃杯","time":"底面直径是<time>四十厘米</time>的圆柱形玻璃杯"}],"visual_guide":""}</JSON>
+<JSON>{"idx":2,"step":"审题","type":"审题","cont":"一个底面直径是二十厘米、","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"底面直径是<mark>20cm</mark>","time":"底面直径是<time>二十厘米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":3,"step":"审题","type":"审题","cont":"高是十五厘米的圆锥形铅锤完全没入水中，水没有溢出。","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"高是<mark>15cm</mark>的圆锥形铅锤","time":"高是<time>十五厘米</time>的圆锥形铅锤"}],"visual_guide":""}</JSON>
+<JSON>{"idx":4,"step":"审题","type":"审题","cont":"要求当取出铅锤后，水面下降了多少厘米。","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"<mark>水面下降了______cm</mark>","time":"<time>水面下降了多少厘米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":5,"step":"审题","type":"审题","cont":"我们可以通过画图的方法来解决这道题，先画出取出铅锤前的图形。","display_cont":"","mark_cont":[],"visual_guide":"画一个圆柱形容器，在圆柱的上底面画出直径，标注底面直径“40cm”。容器内画蓝色水面，水下画一个黑色圆锥，在圆锥下底面画出直径，并标注圆锥底面直径为“20cm”，画出圆锥的高，并标注圆锥的高为“15cm”"}</JSON>
+<JSON>{"idx":6,"step":"审题","type":"审题","cont":"再画出拿出铅锤后的图形。","display_cont":"","mark_cont":[],"visual_guide":"在第一张图的右侧画一个向右的箭头，并在箭头右侧画一个同样大的圆柱形容器，不画圆锥，水面高度明显低于左图。"}</JSON>
+<JSON>{"idx":7,"step":"思路引导","type":"语气引导","cont":"那么怎么求解水面下降了多少厘米呢？","display_cont":"","mark_cont":[],"visual_guide":"用红色虚线在第二张图的水面上方画出下降前的初始水位线，并标记水面下降的高度为“？cm”"}</JSON>
+<JSON>{"idx":8,"step":"思路引导","type":"分析","cont":"我们来思考一下，刚开始，铅锤完全浸没在水里，它占据了一部分空间。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":9,"step":"思路引导","type":"分析","cont":"当我们把铅锤拿出来以后，它原来占据的空间空出来了，水面就会下降。","display_cont":"","mark_cont":[],"visual_guide":"高亮第二张图的两条水位线"}</JSON>
+<JSON>{"idx":10,"step":"思路引导","type":"思维导图节点","cont":"所以，水面下降的那部分水的体积，其实就等于拿出来的圆锥形铅锤的体积。","display_cont":"圆锥形铅锤的体积→下降的水的体积","mark_cont":[],"visual_guide":"同时高亮第二张图中“初始水位线”与“当前水位线”之间的圆柱形空隙区域和第一张图中的圆锥形铅锤。"}</JSON>
+<JSON>{"idx":11,"step":"思路引导","type":"分析","cont":"同时通过图我们可以看出，下降的水的体积可以看作是一个圆柱体积，","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":12,"step":"思路引导","type":"思维导图节点","cont":"那么要求水面下降的高度，我们只需要用圆锥的体积除以圆柱形玻璃杯的底面积就可以啦。","display_cont":"→水面下降的高度","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":13,"step":"步骤讲解","type":"语气引导","cont":"思路非常清晰了，那我们就一步步来计算吧。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":14,"step":"步骤讲解","type":"步骤名称","cont":"首先计算一下圆锥形铅锤的体积。","display_cont":"<b>求圆锥形铅锤的体积</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":15,"step":"步骤讲解","type":"分析","cont":"圆锥形铅锤的底面直径是二十厘米，那半径就是二十除以二等于十厘米。","display_cont":"圆锥形铅锤的半径：$20\\div2=10(\\text{cm})$","mark_cont":[],"visual_guide":"消除第一张图的圆锥直径及其标记信息，在圆锥的底面画一条半径，并标注圆锥底面半径为“10cm”"}</JSON>
+<JSON>{"idx":16,"step":"步骤讲解","type":"语气引导","cont":"现在已经知道了圆锥形铅锤的半径和高，那么体积怎么求呢？","display_cont":"","mark_cont":[],"visual_guide":"高亮圆锥的半径“10cm”和高“15cm”"}</JSON>
+<JSON>{"idx":17,"step":"步骤讲解","type":"公式说明","cont":"我们知道，圆锥的体积公式是三分之一乘底面积乘高，也就是三分之一乘以派乘以半径的平方再乘以高。","display_cont":"$V_{锥}=\\frac{1}{3}\\pi r^{2}h$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":18,"step":"步骤讲解","type":"计算","cont":"所以我们把铅锤的半径和高代入公式就可以求出体积了，也就是三分之一乘三点一四乘十的平方，再乘高十五，经过计算可得最后结果是一千五百七十立方厘米。","display_cont":"圆锥形铅锤的体积：$\\frac{1}{3}\\times3.14\\times10^{2}\\times15=1570(\\text{cm}^{3})$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":19,"step":"步骤讲解","type":"分析","cont":"因为圆锥形铅锤的体积就等于下降的水的体积，所以下降的水的体积也是一千五百七十立方厘米。","display_cont":"下降的水的体积：$1570\\text{cm}^{3}$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":20,"step":"步骤讲解","type":"语气引导","cont":"这样下降的水的体积就计算出来了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":21,"step":"步骤讲解","type":"步骤名称","cont":"然后我们接着计算圆柱形玻璃杯的底面积。","display_cont":"<b>求玻璃杯底面积</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":22,"step":"步骤讲解","type":"分析","cont":"玻璃杯的底面直径是四十厘米，那么半径就是四十除以二等于二十厘米。","display_cont":"玻璃杯底面半径：$40\\div2=20(\\text{cm})$","mark_cont":[],"visual_guide":"消除第一张图的圆柱直径及其标记信息，在圆柱的上底面画一条半径，标注圆柱底面半径为“20cm”"}</JSON>
+<JSON>{"idx":23,"step":"步骤讲解","type":"计算","cont":"因为圆的面积等于派乘半径的平方，所以玻璃杯的底面积就是三点一四乘二十的平方，等于一千二百五十六平方厘米。","display_cont":"玻璃杯底面积：$3.14\\times20^{2}=1256(\\text{cm}^{2})$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":24,"step":"步骤讲解","type":"语气引导","cont":"现在我们知道了下降的水的体积，也求出来玻璃杯的底面积了，那是不是就可以计算水面下降的高度啦。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":25,"step":"步骤讲解","type":"步骤名称","cont":"没错，我们最后来求水面下降了多少厘米。","display_cont":"<b>求水面下降的高度</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":26,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"我们要计算水面下降的高度，应该使用下面哪个算式？","options":{"1570 ÷ 1256":"正确","1256 ÷ 1570":"错误","1570 × 1256":"错误","1570 - 1256":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":27,"step":"步骤讲解","type":"分析","cont":"对，因为下降部分的水是一个圆柱体形状，所以根据圆柱体积公式，体积等于底面积乘高，可以得出高就等于体积除以底面积。","display_cont":"$h=V\\div S$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":28,"step":"步骤讲解","type":"计算","cont":"那么水面下降的高度就是用一千五百七十除以一千二百五十六，算出来等于一点二五厘米。","display_cont":"水面下降的高度：$1570\\div1256=1.25(\\text{cm})$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":29,"step":"步骤讲解","type":"分析","cont":"所以，水面下降了一点二五厘米。","display_cont":"1.25","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":30,"step":"答案","type":"答案讲解","cont":"我们来看一下这道题的正确答案，应该填一点二五。","display_cont":"1.25","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":31,"step":"总结","type":"总结讲解","cont":"这道题的关键在于理解“排水法”的思想：取出物体的体积等于水面下降那部分水的体积。用物体的体积除以容器的底面积，就能算出水位变化的高度啦。","display_cont":"<b>解题关键</b>\n排水法\n1. 下降的水的体积 = 取出的物体体积\n2. $h_{\\text{降}} = V_{\\text{物}} \\div S_{\\text{容器底}}$","mark_cont":[],"visual_guide":""}</JSON>
 
 # 输入题干文本
 {{ques_text}}
@@ -380,7 +471,4 @@ $\textbf{9.}$一个长方形的长为a,宽为b。
 # 输入试题解析
 {{ques_analysis}}
 
-# 当前讲解小题
-{{sub_ques_text}}
-
-# 以上为完整题干，请参考完整题目信息，只讲解当前小题。你的结果：
+# 你的结果：
