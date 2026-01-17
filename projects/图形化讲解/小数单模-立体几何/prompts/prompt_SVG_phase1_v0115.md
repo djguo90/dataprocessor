@@ -317,25 +317,25 @@ time|str|标画的时机，必须是逐字稿片段。使用“<time>逐字稿�
 <JSON>{"idx":5,"step":"审题","type":"审题","cont":"最后问：这根钢材重多少千克？","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"<mark>这根钢材重多少千克</mark>?","time":"<time>这根钢材重多少千克</time>"}],"visual_guide":""}</JSON>
 <JSON>{"idx":6,"step":"思路引导","type":"语气引导","cont":"这道题该怎么思考呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
 <JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"我们先把这根钢材画出来。","display_cont":"","mark_cont":[],"visual_guide":"画一个长方体钢材，看的见的边要化成实线，看不见的边画成虚线，在长方体正下方对应边的旁边用黑色字体标注“长=2.5m”，在长方体右下方对应边的旁边用黑色字体标注“宽=8dm”，在长方体左侧对应边的旁边用黑色字体“厚=0.4dm”"}</JSON>
-<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"题目给出了单位体积的重量，要求钢材的重量，就必须求出钢材的体积，但注意观察，长的单位是“米”，但宽和厚的单位却是“分米”，并且题目给出的单位体积重量是“每立方米”重七千八百千克，所以必须先把所有的长度单位统一换算成“米”，才能算出符合要求的体积。","display_cont":"","mark_cont":[],"visual_guide":"将长方体的长、宽、厚的数值及单位标记为深蓝色，表示强调"}</JSON>
-<JSON>{"idx":8,"step":"思路引导","type":"思维导图节点","cont":"因此我们可以按照先统一单位，再求体积，最后求重量的步骤进行求解。","display_cont":"先统一单位(米)→再求体积(立方米)→求重量","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":9,"step":"步骤讲解","type":"语气引导","cont":"思路确定了，我们分三步来解决。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":10,"step":"步骤讲解","type":"步骤名称","cont":"首先，统一单位。","display_cont":"<b>统一单位</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":11,"step":"步骤讲解","type":"分析","cont":"我们知道，一米等于十分米，所以分米换算成米，要除以十。","display_cont":"进率：$1\\text{m}=10\\text{dm}$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":12,"step":"步骤讲解","type":"计算","cont":"宽是八分米，换算后就是零点八米；厚是零点四分米，换算后是零点零四米。","display_cont":"$8\\text{dm}=0.8\\text{m}$\n$0.4\\text{dm}=0.04\\text{m}$","mark_cont":[],"visual_guide":"将长方体右下方的宽由“8dm”变为“0.8m”，字体为红色；将长方体左侧的厚由“0.4dm”变为“0.04m”，字体为红色；长方体下方表示长的“2.5m”保持不变"}</JSON>
-<JSON>{"idx":13,"step":"步骤讲解","type":"语气引导","cont":"现在，单位都统一成米了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":14,"step":"步骤讲解","type":"步骤名称","cont":"接下来，计算钢材的体积。","display_cont":"<b>计算体积</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":15,"step":"步骤讲解","type":"公式说明","cont":"长方体的体积等于长乘宽乘高。","display_cont":"$V=abh$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":16,"step":"步骤讲解","type":"计算","cont":"我们要用统一单位后的数据来算，也就是二点五乘零点八，再乘零点零四。","display_cont":"$V=2.5\\times0.8\\times0.04$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":17,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"计算：2.5 × 0.8 × 0.04 的结果是多少？","options":{"0.8":"错误","0.08":"正确","0.008":"错误","8":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":18,"step":"步骤讲解","type":"计算","cont":"我们可以先算二点五乘零点八，结果是二，再用二乘零点零四，算出结果是零点零八立方米。","display_cont":"$=2\\times0.04$\n$=0.08$（立方米）","mark_cont":[],"visual_guide":"将整个长方体标为橙色，表示长方体的体积"}</JSON>
-<JSON>{"idx":19,"step":"步骤讲解","type":"语气引导","cont":"好，体积已经算出来了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":20,"step":"步骤讲解","type":"步骤名称","cont":"最后，计算钢材的重量。","display_cont":"<b>计算重量</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":21,"step":"步骤讲解","type":"分析","cont":"题目告诉我们每立方米重七千八百千克，体积是零点零八立方米，将它们相乘就可以算出总的重量。","display_cont":"总重量=体积$\\times$单位体积重量","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":22,"step":"步骤讲解","type":"计算","cont":"列式为零点零八乘七千八百。","display_cont":"$0.08\\times7800$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":23,"step":"步骤讲解","type":"计算","cont":"计算时把小数点向右移动两位，同时去掉两个零，这就变成了八乘七十八，结果是六百二十四千克。","display_cont":"$=8\\times78=624$（千克）","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":24,"step":"答案","type":"答案讲解","cont":"下面我们来一起详细的解答一下吧。应用题记得要写答语哦。所以，这根钢材重六百二十四千克。","display_cont":"解：$8\\text{dm}=0.8\\text{m}$，$0.4\\text{dm}=0.04\\text{m}$\n钢材体积：\n$V=2.5\\times0.8\\times0.04$\n$=0.08(\\text{m}^{3})$\n钢材重量：\n$0.08\\times7800=624(\\text{kg})$\n答：这根钢材重624千克。","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":25,"step":"总结","type":"总结讲解","cont":"这道题最容易出错的地方就是单位！在计算体积之前，一定要先观察长、宽、高的单位是否一致，并且要和题目中给出的单位体积重量（每立方米重多少千克）相匹配，因此，必须统一成“米”后再利用长方体体积公式进行计算。","display_cont":"<b>解题关键</b>\n1. 统一单位：$\\text{dm}\\rightarrow \\text{m}$\n2. 长方体体积公式：$V=abh$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":8,"step":"思路引导","type":"分析","cont":"题目给出了单位体积的重量，要求钢材的重量，就必须求出钢材的体积，但注意观察，长的单位是“米”，但宽和厚的单位却是“分米”，并且题目给出的单位体积重量是“每立方米”重七千八百千克，所以必须先把所有的长度单位统一换算成“米”，才能算出符合要求的体积。","display_cont":"","mark_cont":[],"visual_guide":"将长方体的长、宽、厚的数值及单位标记为深蓝色，表示强调"}</JSON>
+<JSON>{"idx":9,"step":"思路引导","type":"思维导图节点","cont":"因此我们可以按照先统一单位，再求体积，最后求重量的步骤进行求解。","display_cont":"先统一单位(米)→再求体积(立方米)→求重量","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":10,"step":"步骤讲解","type":"语气引导","cont":"思路确定了，我们分三步来解决。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":11,"step":"步骤讲解","type":"步骤名称","cont":"首先，统一单位。","display_cont":"<b>统一单位</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":12,"step":"步骤讲解","type":"分析","cont":"我们知道，一米等于十分米，所以分米换算成米，要除以十。","display_cont":"进率：$1\\text{m}=10\\text{dm}$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":13,"step":"步骤讲解","type":"计算","cont":"宽是八分米，换算后就是零点八米；厚是零点四分米，换算后是零点零四米。","display_cont":"$8\\text{dm}=0.8\\text{m}$\n$0.4\\text{dm}=0.04\\text{m}$","mark_cont":[],"visual_guide":"将长方体右下方的宽由“8dm”变为“0.8m”，字体为红色；将长方体左侧的厚由“0.4dm”变为“0.04m”，字体为红色；长方体下方表示长的“2.5m”保持不变"}</JSON>
+<JSON>{"idx":14,"step":"步骤讲解","type":"语气引导","cont":"现在，单位都统一成米了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":15,"step":"步骤讲解","type":"步骤名称","cont":"接下来，计算钢材的体积。","display_cont":"<b>计算体积</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":16,"step":"步骤讲解","type":"公式说明","cont":"长方体的体积等于长乘宽乘高。","display_cont":"$V=abh$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":17,"step":"步骤讲解","type":"计算","cont":"我们要用统一单位后的数据来算，也就是二点五乘零点八，再乘零点零四。","display_cont":"$V=2.5\\times0.8\\times0.04$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":18,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"计算：2.5 × 0.8 × 0.04 的结果是多少？","options":{"0.8":"错误","0.08":"正确","0.008":"错误","8":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":19,"step":"步骤讲解","type":"计算","cont":"我们可以先算二点五乘零点八，结果是二，再用二乘零点零四，算出结果是零点零八立方米。","display_cont":"$=2\\times0.04$\n$=0.08$（立方米）","mark_cont":[],"visual_guide":"将整个长方体标为橙色，表示长方体的体积"}</JSON>
+<JSON>{"idx":20,"step":"步骤讲解","type":"语气引导","cont":"好，体积已经算出来了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":21,"step":"步骤讲解","type":"步骤名称","cont":"最后，计算钢材的重量。","display_cont":"<b>计算重量</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":22,"step":"步骤讲解","type":"分析","cont":"题目告诉我们每立方米重七千八百千克，体积是零点零八立方米，将它们相乘就可以算出总的重量。","display_cont":"总重量=体积$\\times$单位体积重量","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":23,"step":"步骤讲解","type":"计算","cont":"列式为零点零八乘七千八百。","display_cont":"$0.08\\times7800$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":24,"step":"步骤讲解","type":"计算","cont":"计算时把小数点向右移动两位，同时去掉两个零，这就变成了八乘七十八，结果是六百二十四千克。","display_cont":"$=8\\times78=624$（千克）","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":25,"step":"答案","type":"答案讲解","cont":"下面我们来一起详细的解答一下吧。应用题记得要写答语哦。所以，这根钢材重六百二十四千克。","display_cont":"解：$8\\text{dm}=0.8\\text{m}$，$0.4\\text{dm}=0.04\\text{m}$\n钢材体积：\n$V=2.5\\times0.8\\times0.04$\n$=0.08(\\text{m}^{3})$\n钢材重量：\n$0.08\\times7800=624(\\text{kg})$\n答：这根钢材重624千克。","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":26,"step":"总结","type":"总结讲解","cont":"这道题最容易出错的地方就是单位！在计算体积之前，一定要先观察长、宽、高的单位是否一致，并且要和题目中给出的单位体积重量（每立方米重多少千克）相匹配，因此，必须统一成“米”后再利用长方体体积公式进行计算。","display_cont":"<b>解题关键</b>\n1. 统一单位：$\\text{dm}\\rightarrow \\text{m}$\n2. 长方体体积公式：$V=abh$","mark_cont":[],"visual_guide":""}</JSON>
 
 # 输入输出示例2
 ## 题干输入示例
