@@ -452,6 +452,9 @@ if __name__ == "__main__":
     elif args.phase1_prompt_version == "v4":
         phase1_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase1_v0108.md"
         phase1_correct_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase1_check_v0113.md"
+    elif args.phase1_prompt_version == "v5":
+        phase1_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase1_v0115.md"
+        phase1_correct_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase1_check_v0113.md"
     
     if args.phase2_prompt_version == "v1":
         phase2_prompt_path = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/solid_geometry/prompts/prompt_SVG_phase2_v0105.md"

@@ -466,9 +466,9 @@ time|str|标画的时机，必须是逐字稿片段。使用“<time>逐字稿�
 <JSON>{"idx":31,"step":"总结","type":"总结讲解","cont":"这道题的关键在于理解“排水法”的思想：取出物体的体积等于水面下降那部分水的体积。用物体的体积除以容器的底面积，就能算出水位变化的高度啦。","display_cont":"<b>解题关键</b>\n排水法\n1. 下降的水的体积 = 取出的物体体积\n2. $h_{\\text{降}} = V_{\\text{物}} \\div S_{\\text{容器底}}$","mark_cont":[],"visual_guide":""}</JSON>
 
 # 输入题干文本
-{{ques_text}}
+{{question}}
 
 # 输入试题解析
-{{ques_analysis}}
+{{analysis}}
 
 # 你的结果：
