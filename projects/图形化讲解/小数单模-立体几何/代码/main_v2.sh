@@ -49,9 +49,9 @@
 # --content_key_path .video_content \
 # --analysis_key_path .analysis.html \
 # --phase1_prompt_version v5 \
-# --phase2_prompt_version v5
+# --phase2_prompt_version v6
 
-# for i in {3..5}
+# for i in {4..5}
 # do
 #     python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/main_v2.py \
 #     --save_dir /mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解 \
@@ -63,7 +63,7 @@
 #     --content_key_path .video_content \
 #     --analysis_key_path .analysis.html \
 #     --phase1_prompt_version v5 \
-#     --phase2_prompt_version v5
+#     --phase2_prompt_version v6
 # done
 
 ## 转manim格式
@@ -78,10 +78,10 @@ python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模
 --content_key_path .video_content \
 --analysis_key_path .analysis.html \
 --phase1_prompt_version v5 \
---phase2_prompt_version v5 \
+--phase2_prompt_version v6 \
 --html_template_path /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/htmlTemplate.html
 
-for i in {3..5}
+for i in {4..5}
 do
     python /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/main_v2.py \
     --save_dir /mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解 \
@@ -93,7 +93,7 @@ do
     --content_key_path .video_content \
     --analysis_key_path .analysis.html \
     --phase1_prompt_version v5 \
-    --phase2_prompt_version v5 \
+    --phase2_prompt_version v6 \
     --html_template_path /mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/代码/htmlTemplate.html
 done
 

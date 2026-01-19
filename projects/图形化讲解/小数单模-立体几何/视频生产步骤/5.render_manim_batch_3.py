@@ -73,9 +73,11 @@ LOG_DIR = OUTPUT_ROOT / "log"
 # 如果系统 PATH 未包含 xelatex，可在此添加 LaTeX bin 目录前缀（留空则不改）
 TEX_BIN = r"/usr/bin/xelatex"
 # 进程池并行度（同时渲染的场景数），建议不要超过逻辑核数
-POOL_SIZE = 10
+POOL_SIZE = 20
 # 仓库根目录（用于补充 PYTHONPATH，让 xf_voiceover 可被找到）
 ROOT_DIR = Path(__file__).resolve().parents[2]
+# print(ROOT_DIR)
+# print("*"*1000)
 
 
 def find_manim_py(id_dir: Path) -> Path | None:

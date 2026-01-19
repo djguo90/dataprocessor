@@ -470,6 +470,9 @@ if __name__ == "__main__":
     elif args.phase2_prompt_version == "v5":
         phase2_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase2_v0117.md"
         phase2_correct_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase2_check_v0113.md"
+    elif args.phase2_prompt_version == "v6":
+        phase2_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase2_v0117.md"
+        phase2_correct_prompt_path = "/mnt/pan8T/temp_djguo/dataprocessor/projects/图形化讲解/小数单模-立体几何/prompts/prompt_SVG_phase2_check_v0119.md"
     
     orig_split_data_path = Path(args.save_dir, args.tixing, "1.原始数据", f"{args.tixing}_{args.data_type}_原始数据_part{args.part:03d}.json").as_posix()
     phase1_crawl_in_save_path = Path(args.save_dir, args.tixing, "2.phase1爬取输入_v2", f"{args.tixing}_{args.data_type}_phase1爬取输入_part{args.part:03d}_p{args.phase1_prompt_version}.json").as_posix()

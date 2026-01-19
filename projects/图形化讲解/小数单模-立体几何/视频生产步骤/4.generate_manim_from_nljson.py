@@ -647,11 +647,11 @@ def generate_manim_py(
     lines.append("from pathlib import Path")
     lines.append("from manim import *")
     lines.append("from manim_voiceover import VoiceoverScene")
-    lines.append("from xf_voiceover import XFService")
+    lines.append("from edge_tts_voiceover import EdgeTTSService")
     lines.append("")
     lines.append(f"class {class_name}(VoiceoverScene):")
     lines.append("    def construct(self):")
-    lines.append("        self.set_speech_service(XFService())")
+    lines.append("        self.set_speech_service(EdgeTTSService())")
     lines.append("        self.camera.background_color = WHITE")
     lines.append("        Text.set_default(font='SimHei', color=BLACK)")
     lines.append(
