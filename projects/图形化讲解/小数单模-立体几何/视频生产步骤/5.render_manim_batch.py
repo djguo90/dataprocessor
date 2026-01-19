@@ -57,10 +57,10 @@ from typing import List, Tuple
 from tqdm import tqdm
 
 # -------- 全局配置 --------
-INPUT_ROOT = Path(r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果_v2/小数单模-立体几何_训练集_manim可处理格式_part003_p1v5_p2v5_matched_469")
+INPUT_ROOT = Path(r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果_v2/小数单模-立体几何_试标_manim可处理格式_part001_p1v5_p2v5_matched_186")
 # Path(r"D:\github\svg_exp\script\test_outputs_multi")
 OUTPUT_ROOT = Path(
-    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果_v2/小数单模-立体几何_训练集_视频结果_part003_p1v5_p2v5_matched_469"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果_v2/小数单模-立体几何_试标_视频结果_part001_p1v5_p2v5_matched_186"
 )
 # RANGES: [[start, end], ...] 1-based inclusive; end None -> to last
 RANGES: List[Tuple[int, int | None]] = [(1, None)]
@@ -73,7 +73,7 @@ LOG_DIR = OUTPUT_ROOT / "log"
 # 如果系统 PATH 未包含 xelatex，可在此添加 LaTeX bin 目录前缀（留空则不改）
 TEX_BIN = r"/usr/bin/xelatex"
 # 进程池并行度（同时渲染的场景数），建议不要超过逻辑核数
-POOL_SIZE = 10
+POOL_SIZE = 4
 # 仓库根目录（用于补充 PYTHONPATH，让 xf_voiceover 可被找到）
 ROOT_DIR = Path(__file__).resolve().parents[2]
 

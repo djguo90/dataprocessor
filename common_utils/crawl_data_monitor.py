@@ -7,7 +7,10 @@ import time
 USERNAME = "郭冬杰"
 PASSWORD = "wy7TMap3"
 TASKS = [
-    "资源教育部-辅学-图形化讲解_312_gemini-3-pro-preview-thinking_郭冬杰_1768629880157-小数单模-立体几何_试标_phase1爬取输入_part001_pv5"
+    "资源教育部-辅学-图形化讲解_317_gemini-3-pro-preview-thinking_郭冬杰_1768733869025-小数单模-立体几何_试标_phase2爬取输入_part001_p1v5_p2v5",
+    "资源教育部-辅学-图形化讲解_318_gemini-3-pro-preview-thinking_郭冬杰_1768733869611-小数单模-立体几何_训练集_phase2爬取输入_part003_p1v5_p2v5",
+    "资源教育部-辅学-图形化讲解_319_gemini-3-pro-preview-thinking_郭冬杰_1768733870589-小数单模-立体几何_训练集_phase2爬取输入_part004_p1v5_p2v5",
+    "资源教育部-辅学-图形化讲解_320_gemini-3-pro-preview-thinking_郭冬杰_1768733872405-小数单模-立体几何_训练集_phase2爬取输入_part005_p1v5_p2v5",
 ]
 SLEEP = 10 * 60
 

@@ -174,7 +174,10 @@ base_CONFIG = {
 }
 
 upload_fns = [
-    '/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/2.phase1爬取输入_v2/小数单模-立体几何_试标_phase1爬取输入_part001_pv5.json',
+    '/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/3.phase2爬取输入_v2/小数单模-立体几何_试标_phase2爬取输入_part001_p1v5_p2v5.json',
+    '/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/3.phase2爬取输入_v2/小数单模-立体几何_训练集_phase2爬取输入_part003_p1v5_p2v5.json',
+    '/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/3.phase2爬取输入_v2/小数单模-立体几何_训练集_phase2爬取输入_part004_p1v5_p2v5.json',
+    '/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/3.phase2爬取输入_v2/小数单模-立体几何_训练集_phase2爬取输入_part005_p1v5_p2v5.json',
 ]
 
 for upload_fn in upload_fns:

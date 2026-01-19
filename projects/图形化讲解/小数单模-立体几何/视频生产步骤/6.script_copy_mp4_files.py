@@ -12,14 +12,14 @@ from pathlib import Path
 def copy_mp4_files():
     # Define paths
 
-    videos_dir = r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果_v2/小数单模-立体几何_训练集_视频结果_part005_p1v4_p2v4_matched_489"
+    videos_dir = r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果_v2/小数单模-立体几何_训练集_视频结果_part003_p1v5_p2v5_matched_469"
 
     # Convert string path to Path object if needed
     if isinstance(videos_dir, str):
         videos_dir = Path(videos_dir)
 
     # Create output directory path in parent directory
-    output_dir = videos_dir.parent / "小数单模-立体几何_训练集_视频结果_part005_p1v4_p2v4_matched_489_collected"
+    output_dir = videos_dir.parent / "小数单模-立体几何_训练集_视频结果_part003_p1v5_p2v5_matched_469_collected"
 
     # Check if source directory exists
     if not videos_dir.exists():

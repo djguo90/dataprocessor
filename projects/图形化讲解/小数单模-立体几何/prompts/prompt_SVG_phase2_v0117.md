@@ -127,9 +127,6 @@ xxxxx
 |              | hiddenOpacity      | 1                     | 隐藏线透明度                                                         |
 | 面           | faceFill           | "rgba(0,0,0,0)"       | 面填充色（默认透明）                                                 |
 |              | faceOpacity        | 1                     | 面整体透明度（配合 faceFill 使用）                                   |
-|              | faceStroke         | "none"                | 面描边颜色（默认不描边）                                             |
-|              | faceStrokeWidth    | 0                     | 面描边宽度                                                           |
-|              | faceStrokeOpacity  | 1                     | 面描边透明度                                                         |
 | 顶点         | showVertices       | false                 | 是否显示顶点                                                         |
 |              | vertexRadius       | 4                     | 顶点圆形半径                                                         |
 |              | vertexFill         | "#333"                | 顶点填充色                                                           |
@@ -281,10 +278,11 @@ xxxxx
 |------------|--------------------------|----------------------------------------------------------------------|
 | 组         | `${id}`                  | 圆柱体根组                                                           |
 | 面         | `${id}-bottom-face`      | 底面圆形区域                                                         |
-|            | `${id}-top-face`         | 顶面圆形区域（默认带可见边线描边）                                   |
+|            | `${id}-top-face`         | 顶面圆形区域                                                        |
 |            | `${id}-side-face`        | 侧面矩形投影区域（用于整体高亮）                                     |
 | 边         | `${id}-bottom-front`     | 底面可见前半圆弧（实线）                                             |
 |            | `${id}-bottom-back`      | 底面被遮挡后半圆弧（虚线）                                           |
+|            | `${id}-top`           | 顶面圆弧                                           |
 |            | `${id}-side-0`           | 左侧侧面轮廓线（母线）                                               |
 |            | `${id}-side-1`           | 右侧侧面轮廓线（母线）                                               |
 | 调试点     | `${id}-center-bottom`    | 底面中心点（仅 showCenters=true 时生成）                             |
@@ -600,40 +598,42 @@ autoAvoidOverlap(window.mainSvg, {
 
 # 示例输入
 ## 试题
-把一个棱长是8分米的正方体切成2个大小相同的长方体表面积增加\n128平方分米().
+3.一根长方体钢材,长2.5m,宽8dm,厚0.4dm,每立方米钢材重7800千克,这根钢材重多少千克? 
 
 ## 讲解脚本
-<JSON>{"idx":1,"step":"审题","type":"语气引导","cont":"同学好，今天咱们来解决这道判断题。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":2,"step":"审题","type":"审题","cont":"题目是：把一个棱长是八分米的正方体，","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"把一个<mark>棱长是8分米</mark>的正方体","voice_cont":"题目是：把一个<mark>棱长是八分米</mark>的正方体，"}],"visual_guide":""}</JSON>
-<JSON>{"idx":3,"step":"审题","type":"审题","cont":"切成两个大小相同的长方体，","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"切成2个<mark>大小相同</mark>的长方体表面积","voice_cont":"切成两个<mark>大小相同</mark>的长方体"}],"visual_guide":""}</JSON>
-<JSON>{"idx":4,"step":"审题","type":"审题","cont":"表面积增加一百二十八平方分米，这个说法对吗？","display_cont":"<b>判断：</b>表面积增加128平方分米是否正确？","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"highlight","mark_cont":"<mark>表面积增加\n128平方分米</mark>()","voice_cont":"<mark>表面积增加一百二十八平方分米</mark>"}],"visual_guide":""}</JSON>
-<JSON>{"idx":5,"step":"思路引导","type":"语气引导","cont":"那怎么判断呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":6,"step":"思路引导","type":"分析","cont":"为了看得更清楚，我们先根据题意画出示意图。","display_cont":"","mark_cont":[],"visual_guide":"画一个正方体，下方使用延伸线标注棱长“8分米”。在正方体高的中点处画红色虚线切割线，并在正方体右侧画出两个完全一样的分离的长方体，中间画一个箭头指向它们"}</JSON>
-<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"正方体切成两个长方体后，会新增切面，所以咱们只需要算出新增切面的总面积，就能判断对错啦。","display_cont":"【导图】增加的表面积→新增切面的总面积","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":8,"step":"步骤讲解","type":"语气引导","cont":"接下来咱们一步步计算。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":9,"step":"步骤讲解","type":"步骤名称","cont":"首先观察新增切面的形状。","display_cont":"<b>观察新增切面的形状：</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":10,"step":"步骤讲解","type":"分析","cont":"大家观察右侧两个长方体上高亮的部分，这就是新增的切面。","display_cont":"","mark_cont":[],"visual_guide":"在右侧长方体中以透明红色标记两个新增的切面"}</JSON>
-<JSON>{"idx":11,"step":"步骤讲解","type":"分析","cont":"切面的每条边都等于正方体的棱长，而且每个角都是直角，所以切面是正方形。","display_cont":"切面形状：正方形","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":12,"step":"步骤讲解","type":"语气引导","cont":"好，切面的形状咱们确定好啦。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":13,"step":"步骤讲解","type":"步骤名称","cont":"接下来计算单个切面的面积。","display_cont":"<b>计算单个切面的面积：</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":14,"step":"步骤讲解","type":"公式说明","cont":"正方形的面积等于边长乘以边长。","display_cont":"正方形面积：$面积=边长\\times边长$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":15,"step":"步骤讲解","type":"分析","cont":"观察右侧长方体可知，新增正方形切面的边长等于原正方体棱长八分米。","display_cont":"","mark_cont":[],"visual_guide":"在两个长方体新增正方形切面的右侧分别使用延伸线标注边长“8分米”"}</JSON>
-<JSON>{"idx":16,"step":"步骤讲解","type":"计算","cont":"八乘以八等于六十四平方分米，所以单个切面的面积是六十四平方分米。","display_cont":"$单个切面面积=8\\times8=64$（平方分米）","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":17,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"根据计算结果，单个切面的面积是多少？","options":{"8平方分米":"错误","16平方分米":"错误","64平方分米":"正确","128平方分米":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":18,"step":"步骤讲解","type":"语气引导","cont":"单个切面的面积算出来啦。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":19,"step":"步骤讲解","type":"步骤名称","cont":"然后计算新增切面的总面积。","display_cont":"<b>计算新增切面的总面积：</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":20,"step":"步骤讲解","type":"分析","cont":"切一次会新增两个相同的切面，所以总面积是单个切面面积的两倍。","display_cont":"$新增切面总面积=2\\times单个切面面积$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":21,"step":"步骤讲解","type":"计算","cont":"二乘以六十四等于一百二十八平方分米，正好和题目中的数值一样。","display_cont":"$新增切面总面积=2\\times64=128$（平方分米）","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":22,"step":"步骤讲解","type":"语气引导","cont":"这样咱们就得到了增加的表面积。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":23,"step":"答案","type":"答案讲解","cont":"因为计算出的新增切面总面积是一百二十八平方分米，和题目中的数值完全相同，所以这道题的答案是正确。","display_cont":"正确","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":24,"step":"总结","type":"总结讲解","cont":"这道题的关键知识点是：正方体切割后增加的表面积等于新增切面的总面积，切一次新增两个切面。大家要记住哦！","display_cont":"<b>解题关键：</b>\\n1. 增加的表面积=新增切面总面积\\n2. 切一次新增2个切面","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":0,"step":"审题","type":"语气引导","cont":"同学你好，今天我们要解决一道关于长方体体积和重量计算的实际应用题。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":1,"step":"审题","type":"审题","cont":"先看题干：一根长方体钢材，长二点五米，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"一根长方体钢材,长<mark>2.5m</mark>","time":"一根长方体钢材，长<time>二点五米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":2,"step":"审题","type":"审题","cont":"宽八分米，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"宽<mark>8dm</mark>","time":"宽<time>八分米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":3,"step":"审题","type":"审题","cont":"厚零点四分米。","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"厚<mark>0.4dm</mark>","time":"厚<time>零点四分米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":4,"step":"审题","type":"审题","cont":"题目告诉我们：每立方米钢材重七千八百千克，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"line","cont":"<mark>每立方米</mark>钢材重<mark>7800千克</mark>","time":"<time>每立方米钢材重七千八百千克</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":5,"step":"审题","type":"审题","cont":"最后问：这根钢材重多少千克？","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"<mark>这根钢材重多少千克</mark>?","time":"<time>这根钢材重多少千克</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":6,"step":"思路引导","type":"语气引导","cont":"这道题该怎么思考呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"我们先把这根钢材画出来。","display_cont":"","mark_cont":[],"visual_guide":"画一个长方体钢材，在长方体正下方对应边的旁边用黑色字体标注“长=2.5m”，在长方体右下方对应边的旁边用黑色字体标注“宽=8dm”，在长方体左侧对应边的旁边用黑色字体标注“厚=0.4dm”"}</JSON>
+<JSON>{"idx":8,"step":"思路引导","type":"分析","cont":"题目给出了单位体积的重量，要求钢材的重量，就必须求出钢材的体积，但注意观察，长的单位是“米”，但宽和厚的单位却是“分米”，并且题目给出的单位体积重量是“每立方米”重七千八百千克，所以必须先把所有的长度单位统一换算成“米”，才能算出符合要求的体积。","display_cont":"","mark_cont":[],"visual_guide":"将长方体的长、宽、厚的数值及单位标记为深蓝色，表示强调"}</JSON>
+<JSON>{"idx":9,"step":"思路引导","type":"思维导图节点","cont":"因此我们可以按照先统一单位，再求体积，最后求重量的步骤进行求解。","display_cont":"先统一单位(米)→再求体积(立方米)→求重量","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":10,"step":"步骤讲解","type":"语气引导","cont":"思路确定了，我们分三步来解决。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":11,"step":"步骤讲解","type":"步骤名称","cont":"首先，统一单位。","display_cont":"<b>统一单位</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":12,"step":"步骤讲解","type":"分析","cont":"我们知道，一米等于十分米，所以分米换算成米，要除以十。","display_cont":"进率：$1\\text{m}=10\\text{dm}$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":13,"step":"步骤讲解","type":"计算","cont":"宽是八分米，换算后就是零点八米；厚是零点四分米，换算后是零点零四米。","display_cont":"$8\\text{dm}=0.8\\text{m}$\n$0.4\\text{dm}=0.04\\text{m}$","mark_cont":[],"visual_guide":"将长方体右下方的宽由“8dm”变为“0.8m”，字体为红色；将长方体左侧的厚由“0.4dm”变为“0.04m”，字体为红色；长方体下方表示长的“2.5m”保持不变"}</JSON>
+<JSON>{"idx":14,"step":"步骤讲解","type":"语气引导","cont":"现在，单位都统一成米了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":15,"step":"步骤讲解","type":"步骤名称","cont":"接下来，计算钢材的体积。","display_cont":"<b>计算体积</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":16,"step":"步骤讲解","type":"公式说明","cont":"长方体的体积等于长乘宽乘高。","display_cont":"$V=abh$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":17,"step":"步骤讲解","type":"计算","cont":"我们要用统一单位后的数据来算，也就是二点五乘零点八，再乘零点零四。","display_cont":"$V=2.5\\times0.8\\times0.04$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":18,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"计算：2.5 × 0.8 × 0.04 的结果是多少？","options":{"0.8":"错误","0.08":"正确","0.008":"错误","8":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":19,"step":"步骤讲解","type":"计算","cont":"我们可以先算二点五乘零点八，结果是二，再用二乘零点零四，算出结果是零点零八立方米。","display_cont":"$=2\\times0.04$\n$=0.08$（立方米）","mark_cont":[],"visual_guide":"将整个长方体标为橙色，表示长方体的体积"}</JSON>
+<JSON>{"idx":20,"step":"步骤讲解","type":"语气引导","cont":"好，体积已经算出来了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":21,"step":"步骤讲解","type":"步骤名称","cont":"最后，计算钢材的重量。","display_cont":"<b>计算重量</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":22,"step":"步骤讲解","type":"分析","cont":"题目告诉我们每立方米重七千八百千克，体积是零点零八立方米，将它们相乘就可以算出总的重量。","display_cont":"总重量=体积$\\times$单位体积重量","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":23,"step":"步骤讲解","type":"计算","cont":"列式为零点零八乘七千八百。","display_cont":"$0.08\\times7800$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":24,"step":"步骤讲解","type":"计算","cont":"计算时把小数点向右移动两位，同时去掉两个零，这就变成了八乘七十八，结果是六百二十四千克。","display_cont":"$=8\\times78=624$（千克）","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":25,"step":"答案","type":"答案讲解","cont":"下面我们来一起详细的解答一下吧。应用题记得要写答语哦。所以，这根钢材重六百二十四千克。","display_cont":"解：\n$8\\text{dm}=0.8\\text{m}$，$0.4\\text{dm}=0.04\\text{m}$\n钢材体积：\n$V=2.5\\times0.8\\times0.04$\n$=0.08(\\text{m}^{3})$\n钢材重量：\n$0.08\\times7800=624(\\text{kg})$\n答：这根钢材重624千克。","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":26,"step":"总结","type":"总结讲解","cont":"这道题最容易出错的地方就是单位！在计算体积之前，一定要先观察长、宽、高的单位是否一致，并且要和题目中给出的单位体积重量（每立方米重多少千克）相匹配，因此，必须统一成“米”后再利用长方体体积公式进行计算。","display_cont":"<b>解题关键</b>\n1. 统一单位：$\\text{dm}\\rightarrow \\text{m}$\n2. 长方体体积公式：$V=abh$","mark_cont":[],"visual_guide":""}</JSON>
 
 # 示例输出
 【使用的JS函数】
 ```json
 [
     "drawCuboid",
-    "drawArrow",
     "drawDimensionLine"
 ]
 ```
@@ -641,540 +641,189 @@ autoAvoidOverlap(window.mainSvg, {
 【每一步的输出】
 
 ```html
-<script id="script_step_6">
-// ==========================================
-// Step 6: 绘制初始场景
-// 定义全局常量，供后续步骤复用
-// ==========================================
-
-const CX = 480;
-const CY = 420;     // 地面基准线
-const SCALE = 14;   // 1分米 = 14像素
-const S = 8 * SCALE; // 棱长 8分米 = 112px
-
-const GAP_Y = 80;   // 右侧上下长方体的垂直间距
-const DIST_X = 100; // 左右物体与中心线的距离
-
-// 计算位置坐标 (全局)
-const x_left = -DIST_X - S; // 左侧正方体 X (右边缘在 -DIST_X)
-const x_right = DIST_X;     // 右侧长方体 X (左边缘在 DIST_X)
-const h_cut = S / 2;        // 切割高度
-
-// 1. 左侧正方体 (Left Cube)
-drawCuboid({
-    id: "cube-main",
-    x: x_left, y: 0, z: 0,
-    w: S, h: S, d: S,
-    centerX: CX, centerY: CY,
-    styles: {
-        faceFill: "rgba(255,255,255,0.8)",
-        edgeStroke: "#333",
-        edgeWidth: 2
-    }
-});
-
-// 1.1 标注棱长 "8分米"
-drawDimensionLine({
-    id: "dim-cube-main-w",
-    p1: { x: x_left, y: 0, z: 0 },
-    p2: { x: x_left + S, y: 0, z: 0 },
-    direction: "下",
-    text: "8分米",
-    centerX: CX, centerY: CY,
-    styles: {
-        textOffset: 20
-    }
-});
-
-// 1.2 绘制切割虚线环 (Rectangular Loop)
-// 手动计算四个顶点的投影
-const p_fl = Projections.OBLIQUE(x_left,     h_cut, 0, { centerX: CX, centerY: CY }); // 前左
-const p_fr = Projections.OBLIQUE(x_left + S, h_cut, 0, { centerX: CX, centerY: CY }); // 前右
-const p_br = Projections.OBLIQUE(x_left + S, h_cut, S, { centerX: CX, centerY: CY }); // 后右
-const p_bl = Projections.OBLIQUE(x_left,     h_cut, S, { centerX: CX, centerY: CY }); // 后左
-
-const cutGroup = document.createElementNS(SVG_NS, "g");
-cutGroup.setAttribute("id", "cut-lines");
-
-const cutPoly = document.createElementNS(SVG_NS, "polygon");
-cutPoly.setAttribute("points", `${p_fl.px},${p_fl.py} ${p_fr.px},${p_fr.py} ${p_br.px},${p_br.py} ${p_bl.px},${p_bl.py}`);
-cutPoly.setAttribute("fill", "rgba(225, 29, 72, 0.1)");
-cutPoly.setAttribute("stroke", "#e11d48"); // 红色
-cutPoly.setAttribute("stroke-width", "2");
-cutPoly.setAttribute("stroke-dasharray", "6,4"); // 虚线
-cutGroup.appendChild(cutPoly);
-
-svg.appendChild(cutGroup);
-
-// 2. 右侧两个分离的长方体 (Right Cuboids)
-// 2.1 下半部分
-drawCuboid({
-    id: "cube-bottom",
-    x: x_right, y: 0, z: 0,
-    w: S, h: h_cut, d: S,
-    centerX: CX, centerY: CY,
-    styles: {
-        faceFill: "white",
-        edgeStroke: "#333"
-    }
-});
-
-// 2.2 上半部分 (悬空)
-const y_top_start = h_cut + GAP_Y;
-drawCuboid({
-    id: "cube-top",
-    x: x_right, y: y_top_start, z: 0,
-    w: S, h: h_cut, d: S,
-    centerX: CX, centerY: CY,
-    styles: {
-        faceFill: "rgba(255,255,255,0.9)", 
-        edgeStroke: "#333"
-    }
-});
-
-// 3. 水平指示箭头
-// 位置逻辑：设定在物体深度的一半 (z=S/2)，高度中点
-const arrowY = S / 2;
-const arrowZ = S / 2;
-
-// 计算起点和终点，确保箭头水平
-const pArrowStart = Projections.OBLIQUE(x_left + S + 20, arrowY, arrowZ, { centerX: CX, centerY: CY });
-const pArrowEnd   = Projections.OBLIQUE(x_right - 20,    arrowY, arrowZ, { centerX: CX, centerY: CY });
-
-drawArrow({
-    id: "arrow-process",
-    x1: pArrowStart.px, y1: pArrowStart.py,
-    x2: pArrowEnd.px,   y2: pArrowEnd.py,
-    styles: {
-        stroke: "#666",
-        fill: "#666",
-        arrowSize: 10,
-        strokeWidth: 2.5
-    }
-});
-autoAvoidOverlap(svg)
-</script>
-
-<script id="script_step_10">
-// ==========================================
-// Step 10: 高亮新增切面
-// ==========================================
-// 局部常量
-const highlightColor = "rgba(239, 68, 68, 0.5)"; 
-const strokeColor = "#dc2626"; 
-
-// 1. 下方长方体顶面
-const faceBottomTop = document.getElementById("cube-bottom-face-top");
-if (faceBottomTop) {
-    faceBottomTop.setAttribute("fill", highlightColor);
-    faceBottomTop.setAttribute("stroke", strokeColor);
-    faceBottomTop.setAttribute("stroke-width", "2");
-}
-
-// 2. 上方长方体底面
-const faceTopBottom = document.getElementById("cube-top-face-bottom");
-if (faceTopBottom) {
-    faceTopBottom.setAttribute("fill", highlightColor);
-    faceTopBottom.setAttribute("stroke", strokeColor);
-    faceTopBottom.setAttribute("stroke-width", "2");
-}
-autoAvoidOverlap(svg)
-</script>
-
-<script id="script_step_15">
-// ==========================================
-// Step 15: 标注新增切面的边长 "8分米"
-// 复用 Step 6 定义的 x_right, S, h_cut, GAP_Y, CX, CY
-// ==========================================
-
-// 1. 标注下方长方体切面 (顶面)
-// 标注位置：切面的右侧边 (x=x_right+S)
-drawDimensionLine({
-    id: "dim-cut-bottom",
-    p1: { x: x_right + S, y: h_cut, z: 0 },
-    p2: { x: x_right + S, y: h_cut, z: S },
-    direction: "右",
-    text: "8分米",
-    centerX: CX, centerY: CY,
-});
-
-// 2. 标注上方长方体切面 (底面)
-// 上方长方体的底面高度 = h_cut + GAP_Y
-const y_cut_top = h_cut + GAP_Y;
-
-drawDimensionLine({
-    id: "dim-cut-top",
-    p1: { x: x_right + S, y: y_cut_top, z: 0 },
-    p2: { x: x_right + S, y: y_cut_top, z: S },
-    direction: "右",
-    text: "8分米",
-    centerX: CX, centerY: CY,
-});
-autoAvoidOverlap(svg)
-</script>
-```
-
-# 示例输入
-## 试题
-一个棱长8cm的正方体容器,里面水深6.5cm。把一个物体放入后(物体完全浸没在水中),从容器里溢出45mL水。这个物体的体积是多少立方厘米?
-
-## 讲解脚本
-<JSON>{"idx":1,"step":"审题","type":"语气引导","cont":"同学你好，今天我们要一起解决一道有趣的关于排水体积的问题。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":2,"step":"审题","type":"审题","cont":"来看题干：一个棱长八厘米的正方体容器，","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"<mark>棱长8cm</mark>的正方体","voice_cont":"<mark>棱长八厘米</mark>的正方体"}],"visual_guide":""}</JSON>
-<JSON>{"idx":3,"step":"审题","type":"审题","cont":"里面水深六点五厘米。","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"水深<mark>6.5cm</mark>","voice_cont":"水深<mark>六点五厘米</mark>"}],"visual_guide":""}</JSON>
-<JSON>{"idx":4,"step":"审题","type":"审题","cont":"把一个物体放入后，物体完全浸没在水中，从容器里溢出了四十五毫升水。","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"line","mark_cont":"物体<mark>完全浸没</mark>在水中","voice_cont":"物体<mark>完全浸没</mark>在水中"},{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"溢出<mark>45mL</mark>水","voice_cont":"溢出了<mark>四十五毫升</mark>水"}],"visual_guide":""}</JSON>
-<JSON>{"idx":5,"step":"审题","type":"审题","cont":"题目问：这个物体的体积是多少立方厘米呢？","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"highlight","mark_cont":"<mark>这个物体的体积是多少立方厘米</mark>?","voice_cont":"<mark>这个物体的体积是多少立方厘米</mark>呢"}],"visual_guide":""}</JSON>
-<JSON>{"idx":6,"step":"思路引导","type":"语气引导","cont":"我们怎么求这个物体的体积呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"为了看得更清楚，咱们先把放置物体前后的图画出来。","display_cont":"","mark_cont":[],"visual_guide":"画一个正方体容器，底部用延伸线标注棱长“8cm”，内部水域以透明蓝色表示，使用延伸线标注水深“h=6.5cm”；在右侧画一个同样的容器，内部水域填满整个正方体，容器内底部放置一个完全浸没的任意形状的浅棕色半透明物体，容器外右侧画一个盛满水的杯子，纯文字标注“45mL”"}</JSON>
-<JSON>{"idx":8,"step":"思路引导","type":"分析","cont":"根据排水法原理，物体完全浸没在水中时，它的体积就等于它排开的水的体积。这部分水去哪了呢？一部分让容器里的水面上升了，另一部分溢出到了外面。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":9,"step":"思路引导","type":"分析","cont":"所以，物体的体积就等于“上升的水的体积”加上“溢出的水的体积”，也就是图中高亮的部分。","display_cont":"$物体体积=排开水的体积=上升水的体积+溢出水的体积$","mark_cont":[],"visual_guide":"以透明红色高亮容器内从6.5cm到8cm之间的新增水体部分，同时以透明红色高亮容器外溢出的水"}</JSON>
-<JSON>{"idx":10,"step":"步骤讲解","type":"语气引导","cont":"思路理清了，咱们开始一步步计算。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":11,"step":"步骤讲解","type":"步骤名称","cont":"第一步，先算出容器里水面上升了多少。","display_cont":"<b>计算容器内上升水的体积</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":12,"step":"步骤讲解","type":"分析","cont":"容器棱长是八厘米，原来水深六点五厘米，水面上升到满，高度上升了多少呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":13,"step":"步骤讲解","type":"计算","cont":"用八减去六点五等于一点五厘米。","display_cont":"上升高度：$8-6.5=1.5$（厘米）","mark_cont":[],"visual_guide":"在容器侧面使用辅助线标注从6.5cm到8cm这段距离，标注“1.5cm”"}</JSON>
-<JSON>{"idx":14,"step":"步骤讲解","type":"分析","cont":"这部分上升的水是长方体形状，底面积就是正方体的底面积。","display_cont":"","mark_cont":[],"visual_guide":"高亮容器的底面正方形"}</JSON>
-<JSON>{"idx":15,"step":"步骤讲解","type":"公式说明","cont":"正方体底面积等于棱长乘棱长。","display_cont":"$底面积=棱长\\times棱长$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":16,"step":"步骤讲解","type":"计算","cont":"底面积是八乘八等于六十四平方厘米。","display_cont":"底面积：$8\\times8=64$（平方厘米）","mark_cont":[],"visual_guide":"在底面使用纯文字标注面积“S=64cm²”"}</JSON>
-<JSON>{"idx":17,"step":"步骤讲解","type":"分析","cont":"有了底面积和上升的高度，就能算出容器里增加的水的体积啦。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":18,"step":"步骤讲解","type":"计算","cont":"六十四乘一点五，算出来等于九十六立方厘米。","display_cont":"上升水的体积：$64\\times1.5=96$（立方厘米）","mark_cont":[],"visual_guide":"在容器上方补全的水体部分使用纯文字标注“V=96cm³”"}</JSON>
-<JSON>{"idx":19,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"现在我们算出了容器内上升的水体积是96立方厘米，那物体的总体积是下面哪一个？","options":{"只有溢出的45立方厘米":"错误","只有上升的96立方厘米":"错误","上升的96立方厘米加溢出的45立方厘米":"正确","上升的96立方厘米减溢出的45立方厘米":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":20,"step":"步骤讲解","type":"语气引导","cont":"这样我们就算出了上升部分的水体积。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":21,"step":"步骤讲解","type":"步骤名称","cont":"接下来，我们把溢出的水加进来，求出物体的总体积。","display_cont":"<b>计算物体总体积</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":22,"step":"步骤讲解","type":"概念讲解","cont":"题目中溢出了四十五毫升水。我们要知道，一毫升就等于一立方厘米。","display_cont":"单位换算：$1\\text{mL}=1\\text{cm}^{3}$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":23,"step":"步骤讲解","type":"计算","cont":"所以溢出的水的体积是四十五立方厘米。","display_cont":"溢出水的体积：$45\\text{mL}=45\\text{cm}^{3}$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":24,"step":"步骤讲解","type":"计算","cont":"最后，把容器里上升的九十六立方厘米，加上溢出的四十五立方厘米，加起来等于一百四十一立方厘米。","display_cont":"$总体积=96+45=141$（立方厘米）","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":25,"step":"答案","type":"答案讲解","cont":"解答完成，别忘了写上答语。所以，这个物体的体积是141立方厘米。","display_cont":"答：这个物体的体积是141立方厘米。","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":26,"step":"总结","type":"总结讲解","cont":"解决这道题的关键在于：当物体浸没且有水溢出时，物体的体积等于“容器内水面上升的体积”加上“溢出水的体积”。也就是要先填满容器，再溢出来，两部分都要算哦。","display_cont":"<b>解题关键：</b>\\n$物体体积 = 上升水的体积 + 溢出水的体积$","mark_cont":[],"visual_guide":""}</JSON>
-
-# 示例输出
-【使用的JS函数】
-```json
-[
-    "drawCuboid",
-    "drawCylinder",
-    "drawArrow",
-    "drawDimensionLine",
-    "drawTextLabel"
-]
-```
-
-【每一步的输出】
-```html
 <script id="script_step_7">
 // ==========================================
-// Step 7: 绘制初始场景 (左右对比图)
+// Step 7: 绘制长方体钢材及初始标注
 // ==========================================
 
-// 1. 定义全局布局常量
-const CY = 420;       // 地面基准线
-const SCALE = 18;     // 1cm = 18px
-const S = 8 * SCALE;  // 棱长 8cm = 144px
-const H_WATER = 6.5 * SCALE; // 水深 6.5cm
-const H_RISE = 1.5 * SCALE;  // 上升 1.5cm
+// 1. 定义布局常量
+const CX = 480;
+const CY = 380; // 较低的基准线，留出上方空间
+// 视觉比例设定 (非真实比例，为了图形美观易读进行夸张处理)
+const VIS_L = 360; // 对应 2.5m
+const VIS_W = 140; // 对应 8dm (深度)
+const VIS_H = 50;  // 对应 0.4dm (厚度)
 
-// 调整中心点，拉近距离
-const CX_LEFT = 340;
-const CX_RIGHT = 620;
+// 2. 绘制长方体钢材 (Steel Bar)
+// 坐标原点设为左下前顶点位置：x = -VIS_L/2
+const startX = -VIS_L / 2;
 
-// --- 左侧：放入物体前 ---
-
-// 1.1 容器 (Container)
 drawCuboid({
-    id: "container-left",
-    x: -S/2, y: 0, z: 0,
-    w: S, h: S, d: S,
-    centerX: CX_LEFT, centerY: CY,
+    id: "steel-bar",
+    x: startX, y: 0, z: 0,
+    w: VIS_L, h: VIS_H, d: VIS_W,
+    centerX: CX, centerY: CY,
     styles: {
-        faceFill: "none",
-        edgeStroke: "#333",
-        edgeWidth: 2
+        faceFill: "#cbd5e1",      // 钢材灰蓝色
+        edgeStroke: "#334155",    // 深灰边框
+        edgeWidth: 2,
+        faceOpacity: 0.9
     }
 });
 
-// 1.2 内部水体 (Water) - 实体部分
-drawCuboid({
-    id: "water-left",
-    x: -S/2, y: 0, z: 0,
-    w: S, h: H_WATER, d: S,
-    centerX: CX_LEFT, centerY: CY,
-    styles: {
-        faceFill: "rgba(186, 230, 253, 0.4)", // 淡蓝
-        edgeStroke: "none"
-    }
+// 3. 初始尺寸标注
+
+// 3.1 长 (2.5m)
+drawDimensionLine({
+    id: "dim-len",
+    p1: { x: startX, y: 0, z: 0 },
+    p2: { x: startX + VIS_L, y: 0, z: 0 },
+    direction: "下",
+    text: "长=2.5m",
+    centerX: CX, centerY: CY,
+    styles: { textOffset: 20 }
 });
 
-// 1.3 绘制虚线水面 (Water Level Dashed Lines)
-// 计算水面的四个顶点 (y = H_WATER)
-const wl_p1 = Projections.OBLIQUE(-S/2, H_WATER, 0, { centerX: CX_LEFT, centerY: CY });
-const wl_p2 = Projections.OBLIQUE(S/2,  H_WATER, 0, { centerX: CX_LEFT, centerY: CY });
-const wl_p3 = Projections.OBLIQUE(S/2,  H_WATER, S, { centerX: CX_LEFT, centerY: CY });
-const wl_p4 = Projections.OBLIQUE(-S/2, H_WATER, S, { centerX: CX_LEFT, centerY: CY });
-
-const waterLevelGroup = document.createElementNS(SVG_NS, "g");
-waterLevelGroup.setAttribute("id", "water-level-lines-left");
-const waterPath = document.createElementNS(SVG_NS, "polygon");
-waterPath.setAttribute("id", "water-surface-poly-left");
-waterPath.setAttribute("points", `${wl_p1.px},${wl_p1.py} ${wl_p2.px},${wl_p2.py} ${wl_p3.px},${wl_p3.py} ${wl_p4.px},${wl_p4.py}`);
-waterPath.setAttribute("fill", "rgba(186, 230, 253, 0.2)");
-waterPath.setAttribute("stroke", "#0ea5e9");
-waterPath.setAttribute("stroke-width", "2");
-waterPath.setAttribute("stroke-dasharray", "5,4");
-waterLevelGroup.appendChild(waterPath);
-svg.appendChild(waterLevelGroup);
-
-// 1.4 标注棱长 8cm
+// 3.2 宽 (8dm)
 drawDimensionLine({
-    id: "dim-len-8cm",
-    p1: { x: -S/2, y: 0, z: 0 },
-    p2: { x: S/2,  y: 0, z: 0 },
-    direction: "下", 
-    text: "8cm",
-    centerX: CX_LEFT, centerY: CY,
-});
-
-// 1.5 标注水深 h=6.5cm
-drawDimensionLine({
-    id: "dim-water-h",
-    p1: { x: S/2, y: 0,       z: S }, 
-    p2: { x: S/2, y: H_WATER, z: S },
+    id: "dim-wid",
+    p1: { x: startX + VIS_L, y: 0, z: 0 },
+    p2: { x: startX + VIS_L, y: 0, z: VIS_W },
     direction: "右",
-    text: "h=6.5cm",
-    centerX: CX_LEFT, centerY: CY,
+    text: "宽=8dm",
+    centerX: CX, centerY: CY,
+    styles: { textOffset: 15 }
 });
 
-
-// --- 右侧：放入物体后 ---
-
-// 2.1 沉底物体 (Object)
-drawCuboid({
-    id: "obj-submerged",
-    x: -S/4, y: 0, z: S/4,
-    w: S/2, h: S/4, d: S/2,
-    centerX: CX_RIGHT, centerY: CY,
-    styles: {
-        faceFill: "rgba(168, 85, 24, 0.6)", 
-        edgeStroke: "#92400e"
-    }
+// 3.3 厚 (0.4dm)
+drawDimensionLine({
+    id: "dim-thk",
+    p1: { x: startX, y: VIS_H, z: 0 },
+    p2: { x: startX, y: 0, z: 0 },
+    direction: "左",
+    text: "厚=0.4dm",
+    centerX: CX, centerY: CY,
+    styles: { textOffset: 15 }
 });
 
-// 2.2 基础水体
-drawCuboid({
-    id: "water-right-base",
-    x: -S/2, y: 0, z: 0,
-    w: S, h: H_WATER, d: S,
-    centerX: CX_RIGHT, centerY: CY,
-    styles: {
-        faceFill: "rgba(186, 230, 253, 0.4)",
-        edgeStroke: "none"
-    }
-});
-
-// 2.3 上升水体
-drawCuboid({
-    id: "water-right-rise",
-    x: -S/2, y: H_WATER, z: 0,
-    w: S, h: H_RISE, d: S,
-    centerX: CX_RIGHT, centerY: CY,
-    styles: {
-        faceFill: "rgba(186, 230, 253, 0.5)",
-        edgeStroke: "#7dd3fc",
-        edgeWidth: 1
-    }
-});
-
-// 2.4 容器轮廓
-drawCuboid({
-    id: "container-right",
-    x: -S/2, y: 0, z: 0,
-    w: S, h: S, d: S,
-    centerX: CX_RIGHT, centerY: CY,
-    styles: {
-        faceFill: "none",
-        edgeStroke: "#333",
-        edgeWidth: 2
-    }
-});
-
-// 2.5 溢出杯子 (Cup)
-const CUP_X = S/2 + 90; 
-const CUP_R = 25;
-const CUP_H = 45;
-
-// 杯内水
-drawCylinder({
-    id: "cup-water",
-    x: CUP_X, y: 0, z: 0,
-    r: CUP_R - 2, h: 35, 
-    centerX: CX_RIGHT, centerY: CY,
-    styles: {
-        faceFill: "rgba(186, 230, 253, 0.8)",
-        edgeStroke: "none"
-    }
-});
-
-// 杯身
-drawCylinder({
-    id: "cup-body",
-    x: CUP_X, y: 0, z: 0,
-    r: CUP_R, h: CUP_H,
-    centerX: CX_RIGHT, centerY: CY,
-    styles: {
-        faceFill: "rgba(255, 255, 255, 0.3)",
-        edgeStroke: "#666",
-        edgeWidth: 1.5
-    }
-});
-
-// 2.6 纯文字标注 "45mL" (使用 drawTextLabel)
-drawTextLabel({
-    id: "text-45ml",
-    text: "45mL",
-    x: CUP_X, y: 42, z: 0,
-    centerX: CX_RIGHT, centerY: CY,
-    projectFn: Projections.FRONT,
-    styles: {
-        textFill: "#333",
-        dy: -10,
-        anchor: "middle",
-        haloStroke: "white",
-        haloWidth: 3
-    }
-});
-autoAvoidOverlap(svg)
 </script>
 
-<script id="script_step_9">
+<script id="script_step_8">
 // ==========================================
-// Step 9: 高亮上升水体和溢出水
+// Step 8: 高亮强调单位 (深蓝色)
 // ==========================================
 
-// 1. 高亮上升部分
-const riseGroup = document.getElementById("water-right-rise");
-if (riseGroup) {
-    const polys = riseGroup.querySelectorAll("polygon");
-    polys.forEach(p => {
-        p.setAttribute("fill", "rgba(248, 113, 113, 0.5)"); // 红色半透
-        p.setAttribute("stroke", "#ef4444");
-    });
-}
+const idsToHighlight = ["dim-len-text", "dim-wid-text", "dim-thk-text"];
+const highlightColor = "#1e40af"; // 深蓝色
 
-// 2. 高亮杯中水
-const cupWater = document.getElementById("cup-water");
-if (cupWater) {
-    const polys = cupWater.querySelectorAll("polygon, path");
-    polys.forEach(p => {
-        if (p.tagName === "polygon" || p.tagName === "path") {
-            p.setAttribute("fill", "rgba(248, 113, 113, 0.6)");
-        }
-    });
-}
-autoAvoidOverlap(svg)
+idsToHighlight.forEach(id => {
+    const textEl = document.getElementById(id);
+    if (textEl) {
+        textEl.setAttribute("fill", highlightColor);
+        textEl.style.fontWeight = "bold";
+    }
+});
 </script>
 
 <script id="script_step_13">
 // ==========================================
-// Step 13: 标注上升高度 1.5cm
-// ==========================================
-drawDimensionLine({
-    id: "dim-rise-1.5",
-    p1: { x: S/2, y: H_WATER, z: S },
-    p2: { x: S/2, y: S,       z: S },
-    direction: "右",
-    text: "1.5cm",
-    centerX: CX_RIGHT, centerY: CY,
-    styles: {
-        textFill: "#dc2626"
-    }
-});
-autoAvoidOverlap(svg)
-</script>
-
-<script id="script_step_16">
-// ==========================================
-// Step 16: 纯文字标注底面积 S=64cm²
+// Step 13: 统一单位动画 (变更为米，红色)
 // ==========================================
 
-// 使用 drawTextLabel 替代手动创建 text
-drawTextLabel({
-    id: "text-area-S",
-    text: "S=64cm²",
-    // 3D 坐标：中心点 x=0 (因为容器 x=-S/2, w=S), y=0, z=S/2 (深度中心)
-    x: 0, y: 0, z: S/2,
-    centerX: CX_LEFT, centerY: CY,
-    styles: {
-        textFill: "#b45309", // 棕橙色
-        haloStroke: "white",
-        haloWidth: 3,
-        dy: 10,              // 稍微下移
-        anchor: "middle"
-    }
-});
+const changeColor = "#dc2626"; // 红色
 
-// 高亮底面 (左侧容器)
-const leftBottom = document.getElementById("container-left-face-bottom");
-if (leftBottom) {
-    leftBottom.setAttribute("fill", "rgba(251, 191, 36, 0.4)"); // 黄色
-    leftBottom.setAttribute("stroke", "#f59e0b");
+// 1. 修改宽 (Width)
+const textWid = document.getElementById("dim-wid-text");
+if (textWid) {
+    textWid.textContent = "宽=0.8m";
+    textWid.setAttribute("fill", changeColor);
 }
-autoAvoidOverlap(svg)
+
+// 2. 修改厚 (Thickness)
+const textThk = document.getElementById("dim-thk-text");
+if (textThk) {
+    textThk.textContent = "厚=0.04m";
+    textThk.setAttribute("fill", changeColor);
+}
+
 </script>
 
-<script id="script_step_18">
+<script id="script_step_19">
 // ==========================================
-// Step 18: 纯文字标注上升体积 V=96cm³
+// Step 19: 高亮整个长方体 (体积计算)
+// 要求：修改面的填充色，修改边的颜色，并把修改的元素置顶
 // ==========================================
 
-// 使用 drawTextLabel 替代手动创建 text
-const riseMidY = H_WATER + H_RISE/2;
+const orangeFill = "rgba(251, 146, 60, 0.8)"; // 橙色半透明
+const orangeStroke = "#c2410c";               // 深橙色
 
-drawTextLabel({
-    id: "text-vol-rise",
-    text: "V=96cm³",
-    // 3D 坐标：中心点 x=0, y=中间高度, z=S/2
-    x: 0, y: riseMidY, z: S/2,
-    centerX: CX_RIGHT, centerY: CY,
-    styles: {
-        textFill: "#dc2626", // 红色
-        haloStroke: "white",
-        haloWidth: 3,
-        anchor: "middle"
+// 1. 修改所有面 (Faces)
+// 注意：为了保持3D遮挡关系的正确性，必须按照“从后到前”的顺序追加元素
+// 斜二测/正视图通常顺序：后 -> 底 -> 左 -> 右 -> 上 -> 前
+const sortedFaceSuffixes = ["back", "bottom", "left", "right", "top", "front"];
+
+sortedFaceSuffixes.forEach(suffix => {
+    const face = document.getElementById(`steel-bar-face-${suffix}`);
+    if (face) {
+        face.setAttribute("fill", orangeFill);
+        // 不修改面的 stroke，只修改 fill
+        // 将面提到最前（在 group 内部）
+        face.parentNode.appendChild(face); 
     }
 });
-autoAvoidOverlap(svg)
+
+// 2. 修改所有边 (Edges)
+// 边必须在面之后追加，才能确保边线不被面遮挡
+// drawCuboid 生成 12 条边，ID 从 edge-0 到 edge-11
+for (let i = 0; i < 12; i++) {
+    const edge = document.getElementById(`steel-bar-edge-${i}`);
+    if (edge) {
+        edge.setAttribute("stroke", orangeStroke);
+        // 将边提到最前
+        edge.parentNode.appendChild(edge);
+    }
+}
 </script>
 ```
 
 # 示例输入
 ## 试题
-一个直角三角形,两条直角边分别是3厘米、4厘米,一条斜边是5厘米。将此三角形以4厘米为轴旋转一周,得到一个立体图形,这个立体图形的体积是
- $\underline{立方厘米}$ 。
+一个圆柱与一个圆锥的底面积相等，体积也相等。若圆锥的高是2.4分米，则圆柱的高是______分米；若圆柱的高是2.4分米，则圆锥的高是______分米。
 
 ## 讲解脚本
-<JSON>{"idx":1,"step":"审题","type":"语气引导","cont":"同学你好，今天我们要解决一道关于立体图形旋转求体积的题目。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":2,"step":"审题","type":"审题","cont":"先看题干：一个直角三角形，两条直角边分别是三厘米、四厘米，一条斜边是五厘米。","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"circle","mark_cont":"一个<mark>直角三角形</mark>,两条直角边分别是<mark>3厘米、4厘米</mark>","voice_cont":"一个<mark>直角三角形</mark>，两条直角边分别是<mark>三厘米、四厘米</mark>"}],"visual_guide":""}</JSON>
-<JSON>{"idx":3,"step":"审题","type":"审题","cont":"将此三角形以四厘米为轴旋转一周，得到一个立体图形，","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"line","mark_cont":"以<mark>4厘米为轴</mark>旋转一周","voice_cont":"以<mark>四厘米为轴</mark>旋转一周"}],"visual_guide":""}</JSON>
-<JSON>{"idx":4,"step":"审题","type":"审题","cont":"求这个立体图形的体积是多少立方厘米。","display_cont":"","mark_cont":[{"mark_target":"question_stem","mark_target_idx":-1,"style":"highlight","mark_cont":"这个立体图形的<mark>体积</mark>","voice_cont":"这个立体图形的<mark>体积</mark>"}],"visual_guide":""}</JSON>
-<JSON>{"idx":5,"step":"思路引导","type":"语气引导","cont":"要想算出体积，首先我们得知道旋转出来的这个立体图形到底是什么形状。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":6,"step":"思路引导","type":"分析","cont":"我们先把这个直角三角形画出来，直角边分别是三厘米和四厘米。","display_cont":"","mark_cont":[],"visual_guide":"在画布左侧画一个直角三角形，竖直的直角边较长。使用尺寸线标注竖直直角边“4厘米”，水平直角边“3厘米”，斜边“5厘米”。"}</JSON>
-<JSON>{"idx":7,"step":"思路引导","type":"分析","cont":"当直角三角形绕着一条直角边旋转一周时，它扫过的轨迹会形成一个圆锥。","display_cont":"【导图】旋转后形状→圆锥","mark_cont":[],"visual_guide":"在直角三角形的竖直直角边（4厘米边）上画一个旋转箭头符号。在三角形右侧展示一个半透明的圆锥体，圆锥的高对应三角形的竖直边，底面半径对应三角形的水平边。"}</JSON>
-<JSON>{"idx":8,"step":"步骤讲解","type":"语气引导","cont":"形状确定了，接下来我们分两步来解答。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":9,"step":"步骤讲解","type":"步骤名称","cont":"第一步，确定圆锥的底面半径和高。","display_cont":"<b>1. 确定半径和高</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":10,"step":"步骤讲解","type":"分析","cont":"题目说以四厘米为轴旋转。这个旋转轴，其实就是圆锥的高。","display_cont":"$高=4$（厘米）","mark_cont":[],"visual_guide":"高亮圆锥内部的中心轴线（高），并标注“h=4厘米”"}</JSON>
-<JSON>{"idx":11,"step":"步骤讲解","type":"分析","cont":"而另一条直角边三厘米，就是圆锥底面的半径。","display_cont":"$底面半径=3$（厘米）","mark_cont":[],"visual_guide":"高亮圆锥底面的半径线段，并标注“r=3厘米”"}</JSON>
-<JSON>{"idx":12,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"根据题意，圆锥的底面半径(r)和高(h)分别是多少？","options":{"r=3厘米，h=4厘米":"正确","r=4厘米，h=3厘米":"错误","r=3厘米，h=5厘米":"错误","r=5厘米，h=4厘米":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":13,"step":"步骤讲解","type":"语气引导","cont":"找准了半径和高，计算就不会出错了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":14,"step":"步骤讲解","type":"步骤名称","cont":"第二步，根据公式计算圆锥的体积。","display_cont":"<b>2. 计算圆锥体积</b>","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":15,"step":"步骤讲解","type":"公式说明","cont":"圆锥的体积等于三分之一乘底面积乘高，也就是三分之一乘圆周率乘半径的平方再乘高。","display_cont":"$V=\\frac{1}{3}Sh=\\frac{1}{3}\\pi r^{2}h$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":16,"step":"步骤讲解","type":"计算","cont":"我们将数据代入公式：三分之一乘三点一四，乘半径三的平方，再乘高四。","display_cont":"$V=\\frac{1}{3}\\times3.14\\times3^{2}\\times4$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":17,"step":"步骤讲解","type":"计算","cont":"计算的时候要注意运算顺序，三的平方是九；九乘三分之一等于三；三乘四等于十二。","display_cont":"$=3.14\\times3\\times4\\n=3.14\\times12$","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":18,"step":"步骤讲解","type":"计算","cont":"最后，三点一四乘十二，结果是三十七点六八立方厘米。","display_cont":"$=37.68$（立方厘米）","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":19,"step":"答案","type":"答案讲解","cont":"所以，这个立体图形的体积是三十七点六八立方厘米。","display_cont":"37.68","mark_cont":[],"visual_guide":""}</JSON>
-<JSON>{"idx":20,"step":"总结","type":"总结讲解","cont":"这道题的关键在于：直角三角形绕直角边旋转成圆锥时，作为轴的那条边是高，另一条直角边是底面半径。计算时千万别忘了乘三分之一。","display_cont":"<b>解题关键：</b>\\n1. 旋转轴 = 圆锥的高\\n2. 另一条直角边 = 底面半径\\n3. $V=\\frac{1}{3}\\pi r^{2}h$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":0,"step":"审题","type":"语气引导","cont":"同学你好，今天我们来解答一道关于圆柱和圆锥体积关系的题目。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":1,"step":"审题","type":"审题","cont":"题目中说，一个圆柱与一个圆锥的底面积相等，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"<mark>底面积相等</mark>","time":"<time>底面积相等</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":2,"step":"审题","type":"审题","cont":"体积也相等。","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"<mark>体积也相等</mark>","time":"<time>体积也相等</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":3,"step":"审题","type":"审题","cont":"有两个填空：若圆锥的高是二点四分米，则圆柱的高是多少分米；","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"若圆锥的高是2.4分米，则<mark>圆柱的高是______分米</mark>","time":"若圆锥的高是二点四分米，则<time>圆柱的高是多少分米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":4,"step":"审题","type":"审题","cont":"若圆柱的高是二点四分米，则圆锥的高又是多少分米呢？","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"若圆柱的高是2.4分米，则<mark>圆锥的高是______分米</mark>","time":"若圆柱的高是二点四分米，则<time>圆锥的高又是多少分米</time>呢？"}],"visual_guide":""}</JSON>
+<JSON>{"idx":5,"step":"审题","type":"审题","cont":"为了更加直观地理解题意，我们就先把图形画出来。","display_cont":"","mark_cont":[],"visual_guide":"在画布左侧画一个圆柱，右侧画一个圆锥。圆柱和圆锥的底面积画成一样大，圆锥的高画成圆柱的三倍。在圆柱右侧标注高“h₁”，在圆柱下方标注“底面积S₁”，用虚线画出圆锥的高并标注“h₂”，在圆锥下方标注“底面积S₂”"}</JSON>
+<JSON>{"idx":6,"step":"审题","type":"审题","cont":"已知圆柱和圆锥的底面积相等，体积也相等。","display_cont":"","mark_cont":[],"visual_guide":"将圆柱的底面积“S₁”，圆锥的底面积“S₂”同时高亮标记为红色；然后将圆柱和圆锥同时标记为红色，分别表示它们的体积"}</JSON>
+<JSON>{"idx":7,"step":"思路引导","type":"语气引导","cont":"这道题该怎么思考呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":8,"step":"思路引导","type":"思维导图节点","cont":"圆柱和圆锥“等底等体积”，所以，我们可以根据它们的体积公式推导出高之间的关系，然后代入计算。","display_cont":"根据体积公式推导高的关系→代入计算","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":9,"step":"步骤讲解","type":"语气引导","cont":"有了方向，咱们现在就来解决问题。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":10,"step":"步骤讲解","type":"步骤名称","cont":"首先，根据体积公式推导出圆柱和圆锥的高之间的关系。","display_cont":"<b>根据体积公式推导高的关系</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":11,"step":"步骤讲解","type":"分析","cont":"我们知道，圆柱的体积公式是底面积乘高，圆锥的体积公式是三分之一乘底面积乘高。","display_cont":"\n圆柱体积$V_1=S_1h_1$\n圆锥体积$V_2=\\frac{1}{3}S_2h_2$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":12,"step":"步骤讲解","type":"分析","cont":"题目告诉我们圆柱和圆锥的体积相等，底面积也相等。","display_cont":"$V_1=V_2$，$S_1=S_2$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":13,"step":"步骤讲解","type":"分析","cont":"想一想，圆锥体积公式里自带一个“三分之一”，为了让体积能与圆柱相等，圆锥的高必须得怎么样呢？","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":14,"step":"步骤讲解","type":"分析","cont":"没错，圆锥的高必须是圆柱高的三倍，这样才能抵消掉那个“三分之一”，让体积相等。","display_cont":"$h_2=3h_1$","mark_cont":[],"visual_guide":"对圆柱的高“h₁”，圆锥的高“h₂”同时进行高亮，标记为红色"}</JSON>
+<JSON>{"idx":15,"step":"步骤讲解","type":"步骤名称","cont":"知道了它们高之间的倍数关系，现在我们可以代入数值进行计算结果了。","display_cont":"<b>代入计算</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":16,"step":"步骤讲解","type":"步骤名称","cont":"首先，解答第一个填空：已知圆锥的高是二点四分米，求圆柱的高。","display_cont":"<b>1. 已知圆锥高，求圆柱高</b>","mark_cont":[],"visual_guide":"圆柱的高维持“h₁”不变，将圆锥的高“h₂”替换为“2.4分米”，仍标记为红色"}</JSON>
+<JSON>{"idx":17,"step":"步骤讲解","type":"分析","cont":"刚才我们推导出，圆锥的高是圆柱高的三倍。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":18,"step":"步骤讲解","type":"分析","cont":"反过来讲，圆柱的高就是圆锥高的三分之一。","display_cont":"$h_1=\\frac{1}{3}h_2$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":19,"step":"步骤讲解","type":"计算","cont":"二点四除以三，算出来等于零点八，所以圆柱的高是零点八分米。","display_cont":"$h_1=2.4\\div3=0.8$（分米）","mark_cont":[],"visual_guide":"将圆柱的高替换为“0.8分米”，标记为红色"}</JSON>
+<JSON>{"idx":20,"step":"步骤讲解","type":"语气引导","cont":"第一空填好了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":21,"step":"步骤讲解","type":"步骤名称","cont":"接着解答第二个填空：已知圆柱的高是二点四分米，求圆锥的高。","display_cont":"<b>2. 已知圆柱高，求圆锥高</b>","mark_cont":[],"visual_guide":"将圆柱的高“h₁”替换为“2.4分米”，标记为红色，圆锥的高还原为“h₂”，仍标记为红色"}</JSON>
+<JSON>{"idx":22,"step":"步骤讲解","type":"分析","cont":"要牢记刚才这个高的倍数关系哦，求圆锥的高，就要用圆柱的高去乘以三。","display_cont":"$h_2=3h_1$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":23,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"一个圆柱和一个圆锥的底面积相等，体积也相等，如果圆柱的高是2.4分米，圆锥的高应该是多少？","options":{"7.2分米":"正确","2.4分米":"错误","0.8分米":"错误","无法确定":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":24,"step":"步骤讲解","type":"计算","cont":"二点四乘以三，算出来等于七点二，所以圆锥的高是七点二分米。","display_cont":"$h_2=2.4\\times3=7.2$（分米）","mark_cont":[],"visual_guide":"将圆锥的高替换为“7.2分米”，标记为红色"}</JSON>
+<JSON>{"idx":25,"step":"答案","type":"答案讲解","cont":"现在，我们一起来看一下这道题的正确答案吧。第一个空填零点八，第二个空填七点二。","display_cont":"0.8\n7.2","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":26,"step":"总结","type":"总结讲解","cont":"这道题的解题关键是：根据体积公式，在底面积和体积都相等的情况下，圆锥的高是圆柱高的三倍，或者说圆柱的高是圆锥高的三分之一。千万不要把这个倍数关系搞反了哦。","display_cont":"<b>解题关键</b>\n等底等体积时：\n$h_{锥}=3h_{柱}$，$h_{柱}=\\frac{1}{3}h_{锥}$","mark_cont":[],"visual_guide":""}</JSON>
 
 # 示例输出
 【使用的JS函数】
 ```json
 [
+    "drawCylinder",
     "drawCone",
     "drawDimensionLine",
     "drawAuxiliaryLabel",
@@ -1185,226 +834,735 @@ autoAvoidOverlap(svg)
 【每一步的输出】
 
 ```html
-<script id="script_step_6">
+<script id="script_step_5">
 // ==========================================
-// Step 6: 绘制直角三角形及初始布局
+// Step 5: 绘制初始场景 (圆柱与圆锥)
 // ==========================================
 
 // 1. 定义全局布局常量
-const CX_LEFT = 320;   // 三角形区域中心 (垂直直角边所在X)
-const CX_RIGHT = 720;  // 圆锥区域中心
-const CY = 420;        // 地面基准线
-const SCALE = 50;      // 缩放比例: 1cm = 50px
+const CY = 450;        // 地面基准线
+const CX_CYL = 300;    // 圆柱中心 X
+const CX_CONE = 660;   // 圆锥中心 X
 
-// 几何参数
-const H_TRI = 4 * SCALE; // 垂直直角边 (高)
-const R_TRI = 3 * SCALE; // 水平直角边 (底)
+// 2. 几何尺寸定义 (视觉比例设置为 1:3)
+const R = 60;          // 半径
+const H_CYL_VIS = 80;  // 圆柱视觉高度
+const H_CONE_VIS = 240;// 圆锥视觉高度 (3倍)
 
-// 2. 绘制直角三角形 (Triangle)
-// 设定直角顶点在 (CX_LEFT, CY)
-const p_bottom_center = { x: CX_LEFT, y: CY };           // 直角顶点
-const p_top_center    = { x: CX_LEFT, y: CY - H_TRI };   // 顶部顶点
-const p_outer         = { x: CX_LEFT + R_TRI, y: CY };   // 外侧顶点
-
-const triGroup = document.createElementNS(SVG_NS, "g");
-triGroup.setAttribute("id", "triangle-group");
-
-// 2.1 三角形主体
-const triPath = document.createElementNS(SVG_NS, "path");
-triPath.setAttribute("id", "tri-shape");
-triPath.setAttribute("d", `M ${p_bottom_center.x},${p_bottom_center.y} L ${p_outer.x},${p_outer.y} L ${p_top_center.x},${p_top_center.y} Z`);
-triPath.setAttribute("fill", "rgba(147, 197, 253, 0.5)"); // 浅蓝填充
-triPath.setAttribute("stroke", "#3b82f6");                // 蓝色边框
-triPath.setAttribute("stroke-width", "3");
-triPath.setAttribute("stroke-linejoin", "round");
-triGroup.appendChild(triPath);
-
-// 2.2 直角符号
-const size = 20;
-const rightAngleMark = document.createElementNS(SVG_NS, "path");
-rightAngleMark.setAttribute("d", `M ${p_bottom_center.x + size},${p_bottom_center.y} L ${p_bottom_center.x + size},${p_bottom_center.y - size} L ${p_bottom_center.x},${p_bottom_center.y - size}`);
-rightAngleMark.setAttribute("fill", "none");
-rightAngleMark.setAttribute("stroke", "#3b82f6");
-rightAngleMark.setAttribute("stroke-width", "2");
-triGroup.appendChild(rightAngleMark);
-
-svg.appendChild(triGroup);
-
-// 3. 尺寸标注 (Triangle Dimensions)
-
-// 3.1 垂直直角边 (4cm)
-drawDimensionLine({
-    id: "dim-tri-h",
-    p1: { x: CX_LEFT, y: CY - H_TRI, z: 0 },
-    p2: { x: CX_LEFT, y: CY, z: 0 },
-    direction: "左",
-    text: "4cm",
-    centerX: 0, centerY: 0, 
-    projectFn: (x, y) => ({ px: x, py: y }),
-    styles: { textOffset: 15, ext_length: 10 }
+// 3. 绘制圆柱 (Cylinder)
+drawCylinder({
+    id: "cyl",
+    x: 0, y: 0, z: 0,
+    r: R, h: H_CYL_VIS,
+    centerX: CX_CYL, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        faceFill: "rgba(255, 255, 255, 0.8)",
+        edgeStroke: "#333",
+        edgeWidth: 2
+    }
 });
 
-// 3.2 水平直角边 (3cm)
-drawDimensionLine({
-    id: "dim-tri-r",
-    p1: { x: CX_LEFT, y: CY, z: 0 },
-    p2: { x: CX_LEFT + R_TRI, y: CY, z: 0 },
-    direction: "下",
-    text: "3cm",
-    centerX: 0, centerY: 0,
-    projectFn: (x, y) => ({ px: x, py: y }),
-    styles: { textOffset: 15, ext_length: 10 }
+// 4. 绘制圆锥 (Cone)
+drawCone({
+    id: "cone",
+    x: 0, y: 0, z: 0,
+    r: R, h: H_CONE_VIS,
+    centerX: CX_CONE, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        faceFill: "rgba(255, 255, 255, 0.8)",
+        edgeStroke: "#333",
+        edgeWidth: 2
+    }
 });
 
-// 3.3 斜边 (5cm)
+// 5. 标注高度 (Height Labels)
+
+// 5.1 圆柱高 h1 (外部尺寸线)
+// 放在圆柱右侧，textOffset 确保不压线
 drawDimensionLine({
-    id: "dim-tri-hyp",
-    p1: { x: CX_LEFT + R_TRI, y: CY, z: 0 },
-    p2: { x: CX_LEFT, y: CY - H_TRI, z: 0 },
+    id: "dim-cyl-h",
+    p1: { x: R, y: H_CYL_VIS, z: 0 }, // 顶面右边缘
+    p2: { x: R, y: 0, z: 0 },         // 底面右边缘
     direction: "右",
-    text: "5cm",
-    centerX: 0, centerY: 0,
-    projectFn: (x, y) => ({ px: x, py: y }),
-    styles: { textOffset: 10, ext_length: 10 }
+    text: "h₁",
+    centerX: CX_CYL, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        textOffset: 25, // 增加偏移防止压线
+        ext_length: 12
+    }
 });
-autoAvoidOverlap(svg)
+
+// 5.2 圆锥高 h2 (内部辅助线)
+// 放在圆锥内部轴线上
+drawAuxiliaryLabel({
+    id: "aux-cone-h",
+    p1: { x: 0, y: 0, z: 0 },          // 底面中心
+    p2: { x: 0, y: H_CONE_VIS, z: 0 }, // 顶点
+    text: "h₂",
+    centerX: CX_CONE, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        auxiliaryDashArray: "6,4",
+        stroke: "#666",
+        textOffset: 12, // 文字偏离轴线
+        anchor: "start" // 文字在轴线右侧显示
+    }
+});
+
+// 6. 标注底面积 (Base Area Labels)
+// 使用 drawTextLabel 放置在物体下方
+// 通过 y = -40 (逻辑坐标向下) 来定位
+
+// 6.1 圆柱底面积 S1
+drawTextLabel({
+    id: "lbl-cyl-s",
+    text: "底面积 S₁",
+    x: 0, y: -40, z: 0,
+    centerX: CX_CYL, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        textFill: "#555",
+        anchor: "middle",
+        fontSize: 16
+    }
+});
+
+// 6.2 圆锥底面积 S2
+drawTextLabel({
+    id: "lbl-cone-s",
+    text: "底面积 S₂",
+    x: 0, y: -40, z: 0,
+    centerX: CX_CONE, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        textFill: "#555",
+        anchor: "middle",
+        fontSize: 16
+    }
+});
+</script>
+
+<script id="script_step_6">
+// ==========================================
+// Step 6: 高亮强调等底等体积
+// 策略：体积高亮 = 所有面填充变色 + 所有边线变色
+// ==========================================
+
+const hlFill = "rgba(252, 165, 165, 0.4)"; // 浅红填充
+const hlStroke = "#dc2626";              // 深红描边
+
+// ----------------------
+// 1. 处理圆柱 (Cylinder)
+// ----------------------
+
+// 1.1 高亮圆柱所有面
+const cylFaces = ["cyl-top-face", "cyl-bottom-face", "cyl-side-face"];
+cylFaces.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute("fill", hlFill);
+});
+
+// 1.2 高亮圆柱所有边 (通过ID单独获取，不依赖face stroke)
+const cylEdges = [
+    "cyl-top",           // 顶面圆环
+    "cyl-bottom-front",  // 底面可视弧
+    "cyl-bottom-back",   // 底面虚线弧
+    "cyl-side-0",        // 左母线
+    "cyl-side-1"         // 右母线
+];
+cylEdges.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.setAttribute("stroke", hlStroke);
+        el.setAttribute("stroke-width", "2.5");
+        // 确保边线在最上层
+        el.parentNode.appendChild(el); 
+    }
+});
+
+// ----------------------
+// 2. 处理圆锥 (Cone)
+// ----------------------
+
+// 2.1 高亮圆锥所有面
+const coneFaces = ["cone-base-face", "cone-body-face"];
+coneFaces.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute("fill", hlFill);
+});
+
+// 2.2 高亮圆锥所有边
+const coneEdges = [
+    "cone-base-front", // 底面可视弧
+    "cone-base-back",  // 底面虚线弧
+    "cone-side-0",     // 左母线
+    "cone-side-1"      // 右母线
+];
+coneEdges.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.setAttribute("stroke", hlStroke);
+        el.setAttribute("stroke-width", "2.5");
+        el.parentNode.appendChild(el);
+    }
+});
+
+// ----------------------
+// 3. 高亮文字 S1, S2
+// ----------------------
+const textS1 = document.getElementById("lbl-cyl-s-text");
+const textS2 = document.getElementById("lbl-cone-s-text");
+if(textS1) {
+    textS1.setAttribute("fill", hlStroke);
+    textS1.setAttribute("font-weight", "bold");
+}
+if(textS2) {
+    textS2.setAttribute("fill", hlStroke);
+    textS2.setAttribute("font-weight", "bold");
+}
+</script>
+
+<script id="script_step_14">
+// ==========================================
+// Step 14: 高亮高度关系 (h2 = 3h1)
+// ==========================================
+
+const heightColor = "#ea580c"; // 橙色
+
+// 1. 高亮圆柱高 h1
+const dimCylLine = document.getElementById("dim-cyl-h-dim");   // 主线
+const dimCylArr = document.getElementById("dim-cyl-h-arrows"); // 箭头
+const dimCylText = document.getElementById("dim-cyl-h-text");  // 文字
+
+if(dimCylLine) dimCylLine.setAttribute("stroke", heightColor);
+if(dimCylArr) {
+    dimCylArr.setAttribute("fill", heightColor);
+    dimCylArr.setAttribute("stroke", heightColor);
+}
+if(dimCylText) {
+    dimCylText.setAttribute("fill", heightColor);
+    dimCylText.setAttribute("font-weight", "bold");
+}
+
+// 2. 高亮圆锥高 h2
+const auxConeLine = document.getElementById("aux-cone-h-line"); // 轴线
+const auxConeText = document.getElementById("aux-cone-h-text"); // 文字
+
+if(auxConeLine) {
+    auxConeLine.setAttribute("stroke", heightColor);
+    auxConeLine.setAttribute("stroke-width", "2");
+    auxConeLine.setAttribute("stroke-dasharray", "none"); // 变为实线强调
+}
+if(auxConeText) {
+    auxConeText.setAttribute("fill", heightColor);
+    auxConeText.setAttribute("font-weight", "bold");
+}
+</script>
+
+<script id="script_step_16">
+// ==========================================
+// Step 16: 第一问 - 填入已知圆锥高 2.4dm
+// ==========================================
+
+// 更新圆锥高度文本
+const coneText = document.getElementById("aux-cone-h-text");
+if (coneText) {
+    coneText.textContent = "2.4分米";
+    // 之前已手动设置位置，无需 autoAvoidOverlap
+}
+</script>
+
+<script id="script_step_19">
+// ==========================================
+// Step 19: 第一问 - 显示计算结果圆柱高 0.8dm
+// ==========================================
+
+const resultColor = "#16a34a"; // 绿色
+
+// 更新圆柱高度文本
+const cylText = document.getElementById("dim-cyl-h-text");
+if (cylText) {
+    cylText.textContent = "0.8分米";
+    cylText.setAttribute("fill", resultColor);
+}
+</script>
+
+<script id="script_step_21">
+// ==========================================
+// Step 21: 第二问 - 场景重置
+// 已知圆柱高 2.4dm，求圆锥高
+// ==========================================
+
+const resetColor = "#ea580c"; // 还原为橙色
+
+// 1. 设置圆柱高为 2.4分米
+const cylText2 = document.getElementById("dim-cyl-h-text");
+if (cylText2) {
+    cylText2.textContent = "2.4分米";
+    cylText2.setAttribute("fill", resetColor);
+}
+
+// 2. 重置圆锥高为 h2 (待求)
+const coneText2 = document.getElementById("aux-cone-h-text");
+if (coneText2) {
+    coneText2.textContent = "h₂ = ?";
+    coneText2.setAttribute("fill", resetColor);
+}
+</script>
+
+<script id="script_step_24">
+// ==========================================
+// Step 24: 第二问 - 显示计算结果圆锥高 7.2dm
+// ==========================================
+
+const resultColor2 = "#16a34a"; // 绿色
+
+// 更新圆锥高度文本
+const coneText3 = document.getElementById("aux-cone-h-text");
+if (coneText3) {
+    coneText3.textContent = "7.2分米";
+    coneText3.setAttribute("fill", resultColor2);
+}
+</script>
+```
+
+# 示例输入
+
+## 试题
+一个底面直径是40cm的圆柱形玻璃杯装有一些水,一个底面直径是20cm,高是15cm的圆锥形铅锤完全没入水中(水未溢出),当取出铅锤后,水面下降了______cm。
+
+## 讲解脚本
+<JSON>{"idx":0,"step":"审题","type":"语气引导","cont":"同学你好，我们一起来看看这个题。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":1,"step":"审题","type":"审题","cont":"先看题干：一个底面直径是四十厘米的圆柱形玻璃杯装有一些水，","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"底面直径是<mark>40cm</mark>的圆柱形玻璃杯","time":"底面直径是<time>四十厘米</time>的圆柱形玻璃杯"}],"visual_guide":""}</JSON>
+<JSON>{"idx":2,"step":"审题","type":"审题","cont":"一个底面直径是二十厘米、","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"底面直径是<mark>20cm</mark>","time":"底面直径是<time>二十厘米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":3,"step":"审题","type":"审题","cont":"高是十五厘米的圆锥形铅锤完全没入水中，水没有溢出。","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"circle","cont":"高是<mark>15cm</mark>的圆锥形铅锤","time":"高是<time>十五厘米</time>的圆锥形铅锤"}],"visual_guide":""}</JSON>
+<JSON>{"idx":4,"step":"审题","type":"审题","cont":"要求当取出铅锤后，水面下降了多少厘米。","display_cont":"","mark_cont":[{"mark_idx":-1,"style":"highlight","cont":"<mark>水面下降了______cm</mark>","time":"<time>水面下降了多少厘米</time>"}],"visual_guide":""}</JSON>
+<JSON>{"idx":5,"step":"审题","type":"审题","cont":"我们可以通过画图的方法来解决这道题，先画出取出铅锤前的图形。","display_cont":"","mark_cont":[],"visual_guide":"画一个圆柱形容器，在圆柱的上底面画出直径，标注底面直径“40cm”。容器内画蓝色水面，水下画一个黑色圆锥，在圆锥下底面画出直径，并标注圆锥底面直径为“20cm”，画出圆锥的高，并标注圆锥的高为“15cm”"}</JSON>
+<JSON>{"idx":6,"step":"审题","type":"审题","cont":"再画出拿出铅锤后的图形。","display_cont":"","mark_cont":[],"visual_guide":"在第一张图的右侧画一个向右的箭头，并在箭头右侧画一个同样大的圆柱形容器，不画圆锥，水面高度明显低于左图。"}</JSON>
+<JSON>{"idx":7,"step":"思路引导","type":"语气引导","cont":"那么怎么求解水面下降了多少厘米呢？","display_cont":"","mark_cont":[],"visual_guide":"用红色虚线在第二张图的水面上方画出下降前的初始水位线，并标记水面下降的高度为“？cm”"}</JSON>
+<JSON>{"idx":8,"step":"思路引导","type":"分析","cont":"我们来思考一下，刚开始，铅锤完全浸没在水里，它占据了一部分空间。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":9,"step":"思路引导","type":"分析","cont":"当我们把铅锤拿出来以后，它原来占据的空间空出来了，水面就会下降。","display_cont":"","mark_cont":[],"visual_guide":"高亮第二张图的两条水位线"}</JSON>
+<JSON>{"idx":10,"step":"思路引导","type":"思维导图节点","cont":"所以，水面下降的那部分水的体积，其实就等于拿出来的圆锥形铅锤的体积。","display_cont":"圆锥形铅锤的体积→下降的水的体积","mark_cont":[],"visual_guide":"同时高亮第二张图中“初始水位线”与“当前水位线”之间的圆柱形空隙区域和第一张图中的圆锥形铅锤。"}</JSON>
+<JSON>{"idx":11,"step":"思路引导","type":"分析","cont":"同时通过图我们可以看出，下降的水的体积可以看作是一个圆柱体积，","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":12,"step":"思路引导","type":"思维导图节点","cont":"那么要求水面下降的高度，我们只需要用圆锥的体积除以圆柱形玻璃杯的底面积就可以啦。","display_cont":"→水面下降的高度","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":13,"step":"步骤讲解","type":"语气引导","cont":"思路非常清晰了，那我们就一步步来计算吧。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":14,"step":"步骤讲解","type":"步骤名称","cont":"首先计算一下圆锥形铅锤的体积。","display_cont":"<b>求圆锥形铅锤的体积</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":15,"step":"步骤讲解","type":"分析","cont":"圆锥形铅锤的底面直径是二十厘米，那半径就是二十除以二等于十厘米。","display_cont":"圆锥形铅锤的半径：$20\\div2=10(\\text{cm})$","mark_cont":[],"visual_guide":"消除第一张图的圆锥直径及其标记信息，在圆锥的底面画一条半径，并标注圆锥底面半径为“10cm”"}</JSON>
+<JSON>{"idx":16,"step":"步骤讲解","type":"语气引导","cont":"现在已经知道了圆锥形铅锤的半径和高，那么体积怎么求呢？","display_cont":"","mark_cont":[],"visual_guide":"高亮圆锥的半径“10cm”和高“15cm”"}</JSON>
+<JSON>{"idx":17,"step":"步骤讲解","type":"公式说明","cont":"我们知道，圆锥的体积公式是三分之一乘底面积乘高，也就是三分之一乘以派乘以半径的平方再乘以高。","display_cont":"$V_{锥}=\\frac{1}{3}\\pi r^{2}h$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":18,"step":"步骤讲解","type":"计算","cont":"所以我们把铅锤的半径和高代入公式就可以求出体积了，也就是三分之一乘三点一四乘十的平方，再乘高十五，经过计算可得最后结果是一千五百七十立方厘米。","display_cont":"圆锥形铅锤的体积：$\\frac{1}{3}\\times3.14\\times10^{2}\\times15=1570(\\text{cm}^{3})$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":19,"step":"步骤讲解","type":"分析","cont":"因为圆锥形铅锤的体积就等于下降的水的体积，所以下降的水的体积也是一千五百七十立方厘米。","display_cont":"下降的水的体积：$1570\\text{cm}^{3}$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":20,"step":"步骤讲解","type":"语气引导","cont":"这样下降的水的体积就计算出来了。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":21,"step":"步骤讲解","type":"步骤名称","cont":"然后我们接着计算圆柱形玻璃杯的底面积。","display_cont":"<b>求玻璃杯底面积</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":22,"step":"步骤讲解","type":"分析","cont":"玻璃杯的底面直径是四十厘米，那么半径就是四十除以二等于二十厘米。","display_cont":"玻璃杯底面半径：$40\\div2=20(\\text{cm})$","mark_cont":[],"visual_guide":"消除第一张图的圆柱直径及其标记信息，在圆柱的上底面画一条半径，标注圆柱底面半径为“20cm”"}</JSON>
+<JSON>{"idx":23,"step":"步骤讲解","type":"计算","cont":"因为圆的面积等于派乘半径的平方，所以玻璃杯的底面积就是三点一四乘二十的平方，等于一千二百五十六平方厘米。","display_cont":"玻璃杯底面积：$3.14\\times20^{2}=1256(\\text{cm}^{2})$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":24,"step":"步骤讲解","type":"语气引导","cont":"现在我们知道了下降的水的体积，也求出来玻璃杯的底面积了，那是不是就可以计算水面下降的高度啦。","display_cont":"","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":25,"step":"步骤讲解","type":"步骤名称","cont":"没错，我们最后来求水面下降了多少厘米。","display_cont":"<b>求水面下降的高度</b>","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":26,"step":"步骤讲解","type":"出选择题","cont":"","display_cont":{"question":"我们要计算水面下降的高度，应该使用下面哪个算式？","options":{"1570 ÷ 1256":"正确","1256 ÷ 1570":"错误","1570 × 1256":"错误","1570 - 1256":"错误"}},"mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":27,"step":"步骤讲解","type":"分析","cont":"对，因为下降部分的水是一个圆柱体形状，所以根据圆柱体积公式，体积等于底面积乘高，可以得出高就等于体积除以底面积。","display_cont":"$h=V\\div S$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":28,"step":"步骤讲解","type":"计算","cont":"那么水面下降的高度就是用一千五百七十除以一千二百五十六，算出来等于一点二五厘米。","display_cont":"水面下降的高度：$1570\\div1256=1.25(\\text{cm})$","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":29,"step":"步骤讲解","type":"分析","cont":"所以，水面下降了一点二五厘米。","display_cont":"1.25","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":30,"step":"答案","type":"答案讲解","cont":"我们来看一下这道题的正确答案，应该填一点二五。","display_cont":"1.25","mark_cont":[],"visual_guide":""}</JSON>
+<JSON>{"idx":31,"step":"总结","type":"总结讲解","cont":"这道题的关键在于理解“排水法”的思想：取出物体的体积等于水面下降那部分水的体积。用物体的体积除以容器的底面积，就能算出水位变化的高度啦。","display_cont":"<b>解题关键</b>\n排水法\n1. 下降的水的体积 = 取出的物体体积\n2. $h_{\\text{降}} = V_{\\text{物}} \\div S_{\\text{容器底}}$","mark_cont":[],"visual_guide":""}</JSON>
+
+# 示例输出
+【使用的JS函数】
+```json
+[
+    "drawCylinder",
+    "drawCone",
+    "drawArrow",
+    "drawDimensionLine",
+    "drawAuxiliaryLabel",
+    "drawTextLabel"
+]
+```
+
+【每一步的输出】
+
+```html
+<script id="script_step_5">
+// ==========================================
+// Step 5: 绘制初始场景 (左侧：圆柱+水+圆锥)
+// ==========================================
+
+// 1. 定义全局布局常量
+const CY = 420;        // 地面基准线
+const CX_L = 260;      // 左侧圆柱中心 (Scene 1)
+const CX_R = 700;      // 右侧圆柱中心 (Scene 2)
+
+// 2. 几何尺寸定义 (Visual Scale)
+// 真实尺寸: D_cyl=40, D_cone=20, H_cone=15
+// 视觉比例: 1 unit = 4 pixels (approx)
+const R_CYL = 80;      // 对应 D=40cm
+const R_CONE = 40;     // 对应 D=20cm
+const H_CONE = 60;     // 对应 H=15cm
+const H_WATER_1 = 100; // 初始水位 (需完全没过圆锥)
+const H_CONTAINER = 140; // 容器高度
+
+// 3. 绘制场景1内部物体 (层级控制：先画内部，再画外部)
+
+// 3.1 绘制圆锥 (铅锤) - 位于中心底部
+drawCone({
+    id: "cone-obj",
+    x: 0, y: 0, z: 0,
+    r: R_CONE, h: H_CONE,
+    centerX: CX_L, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        faceFill: "#333", // 黑色圆锥
+        edgeStroke: "#000",
+        faceOpacity: 1
+    }
+});
+
+// 3.2 绘制水体 (Scene 1) - 半透明蓝色，覆盖在圆锥上
+drawCylinder({
+    id: "water-1",
+    x: 0, y: 0, z: 0,
+    r: R_CYL, h: H_WATER_1,
+    centerX: CX_L, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        faceFill: "rgba(59, 130, 246, 0.4)", // 蓝色半透明
+        edgeStroke: "none"                   // 暂不画边框，后续手动处理顶面
+    }
+});
+// 手动设置水面边缘颜色 (API不支持 topFaceStroke 参数，需DOM操作)
+const water1Top = document.getElementById("water-1-top");
+if (water1Top) {
+    water1Top.setAttribute("stroke", "#2563eb");
+    water1Top.setAttribute("stroke-width", "2");
+}
+
+// 3.3 绘制圆柱容器 (玻璃杯) - 只有边框
+drawCylinder({
+    id: "glass-1",
+    x: 0, y: 0, z: 0,
+    r: R_CYL, h: H_CONTAINER,
+    centerX: CX_L, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        faceFill: "none",
+        edgeStroke: "#64748b",
+        edgeWidth: 2
+    }
+});
+
+// 4. 初始标注
+
+// 4.1 圆柱底面直径 D=40cm (标注在上底面，清晰可见，实线)
+drawAuxiliaryLabel({
+    id: "lbl-cyl-d",
+    p1: { x: -R_CYL, y: H_CONTAINER, z: 0 },
+    p2: { x: R_CYL, y: H_CONTAINER, z: 0 },
+    text: "d = 40cm",
+    centerX: CX_L, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        auxiliaryDashArray: null, // 实线
+        markerStart: true,        // 模拟直径两端箭头
+        markerEnd: true,
+        textOffset: -10
+    }
+});
+
+// 4.2 圆锥底面直径 D=20cm (画在圆锥底面，需透过半透明水体)
+// 修正：使用琥珀色(Amber)，虚线绘制，向下偏移
+drawAuxiliaryLabel({
+    id: "lbl-cone-d",
+    p1: { x: -R_CONE, y: 0, z: 0 },
+    p2: { x: R_CONE, y: 0, z: 0 },
+    text: "d = 20cm",
+    centerX: CX_L, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        stroke: "#fbbf24",       // Amber-400
+        textFill: "#fbbf24",
+        auxiliaryDashArray: "4,4", // 虚线
+        textOffset: 15           // 向下偏移更多避免遮挡
+    }
+});
+
+// 4.3 圆锥高 H=15cm
+drawAuxiliaryLabel({
+    id: "lbl-cone-h",
+    p1: { x: 0, y: 0, z: 0 },
+    p2: { x: 0, y: H_CONE, z: 0 },
+    text: "h = 15cm",
+    centerX: CX_L, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        stroke: "#fbbf24",       // Amber-400
+        textFill: "#fbbf24",
+        auxiliaryDashArray: "4,4", // 虚线
+        anchor: "start",
+        textOffset: 10
+    }
+});
+</script>
+
+<script id="script_step_6">
+// ==========================================
+// Step 6: 绘制场景2 (右侧：取出铅锤后的状态)
+// ==========================================
+
+// 1. 绘制箭头 (Transition)
+drawArrow({
+    id: "arrow-trans",
+    x1: CX_L + R_CYL + 20, y1: CY - H_CONTAINER/2,
+    x2: CX_R - R_CYL - 20, y2: CY - H_CONTAINER/2,
+    styles: {
+        fill: "#666",
+        strokeWidth: 2,
+        arrowSize: 12
+    }
+});
+
+// 2. 计算下降后的高度 (Visual)
+// 设下降高度为 30px (夸张显示以便观察)
+const H_DROP_VIS = 30;
+const H_WATER_2 = H_WATER_1 - H_DROP_VIS;
+
+// 3. 绘制右侧水体 (Lower Level)
+drawCylinder({
+    id: "water-2",
+    x: 0, y: 0, z: 0,
+    r: R_CYL, h: H_WATER_2,
+    centerX: CX_R, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        faceFill: "rgba(59, 130, 246, 0.4)",
+        edgeStroke: "none"
+    }
+});
+// 手动设置水面边缘
+const water2Top = document.getElementById("water-2-top");
+if (water2Top) {
+    water2Top.setAttribute("stroke", "#2563eb");
+    water2Top.setAttribute("stroke-width", "2");
+}
+
+// 4. 绘制右侧容器
+drawCylinder({
+    id: "glass-2",
+    x: 0, y: 0, z: 0,
+    r: R_CYL, h: H_CONTAINER,
+    centerX: CX_R, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        faceFill: "none",
+        edgeStroke: "#64748b",
+        edgeWidth: 2
+    }
+});
 </script>
 
 <script id="script_step_7">
 // ==========================================
-// Step 7: 绘制无箭头旋转圆弧与圆锥体
+// Step 7: 标注下降的水位
 // ==========================================
 
-// 1. 旋转圆弧 (Rotation Arc)
-const arrowGroup = document.createElementNS(SVG_NS, "g");
-arrowGroup.setAttribute("id", "rotation-arc-simple");
-
-// 绘制紧凑的椭圆弧
-const ax = CX_LEFT;         // 轴心X
-const ay = CY - H_TRI / 2;  // 轴心Y (垂直边中点)
-const rx = 15;              // 半径
-const ry = 6;               // 扁度
-
-// 计算路径点
-const t1 = Math.PI * 0.85; 
-const x1 = ax + rx * Math.cos(t1);
-const y1 = ay + ry * Math.sin(t1);
-
-const t2 = Math.PI * 2.15;
-const x2 = ax + rx * Math.cos(t2);
-const y2 = ay + ry * Math.sin(t2);
-
-const arcPath = document.createElementNS(SVG_NS, "path");
-arcPath.setAttribute("d", `
-    M ${x1},${y1}
-    A ${rx} ${ry} 0 1 1 ${x2},${y2}
-`);
-
-arcPath.setAttribute("fill", "none");
-arcPath.setAttribute("stroke", "#e11d48");
-arcPath.setAttribute("stroke-width", "2");
-arcPath.setAttribute("stroke-linecap", "round");
-arrowGroup.appendChild(arcPath);
-
-svg.appendChild(arrowGroup);
-
-// 2. 绘制右侧圆锥 (Cone)
-drawCone({
-    id: "cone-main",
-    x: 0, y: 0, z: 0, 
-    r: R_TRI, 
-    h: H_TRI,
-    centerX: CX_RIGHT, centerY: CY, 
+// 1. 绘制初始水位线 (虚线圆) - 在右侧图中表示“原来的位置”
+// 这是一个位于 H_WATER_1 高度的圆面轮廓
+drawCylinder({
+    id: "water-level-ghost",
+    x: 0, y: 0, z: 0,
+    r: R_CYL, h: H_WATER_1, // 原始高度
+    centerX: CX_R, centerY: CY,
     projectFn: Projections.FRONT,
     styles: {
-        faceFill: "rgba(253, 186, 116, 0.3)", // 橙色半透
-        edgeStroke: "#f97316",
-        edgeWidth: 2,
-        hiddenStroke: "#f97316",
-        hiddenOpacity: 0.3,
-        showVertices: false,
-        showCenters: false
+        faceFill: "none",
+        edgeStroke: "none", // 隐藏所有边，随后手动显示顶面
+        showVertices: false
     }
 });
-autoAvoidOverlap(svg)
+// 手动设置虚线圆
+const ghostTop = document.getElementById("water-level-ghost-top");
+if (ghostTop) {
+    ghostTop.setAttribute("stroke", "#dc2626"); // 红色
+    ghostTop.setAttribute("stroke-width", "2");
+    ghostTop.setAttribute("stroke-dasharray", "5,5"); // 虚线
+}
+
+// 2. 标注下降的高度 "? cm"
+// 绘制一条垂直线段连接两个液面
+drawDimensionLine({
+    id: "dim-drop",
+    p1: { x: R_CYL, y: H_WATER_1, z: 0 }, // 原始液面右侧
+    p2: { x: R_CYL, y: H_WATER_2, z: 0 }, // 当前液面右侧
+    direction: "右",
+    text: "? cm",
+    centerX: CX_R, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        stroke: "#dc2626", // 红色标注
+        textFill: "#dc2626",
+        ext_length: 20,
+        textOffset: 10
+    }
+});
+</script>
+
+<script id="script_step_9">
+// ==========================================
+// Step 9: 高亮水位线
+// ==========================================
+
+// 高亮 ghost level (上水位) 和 water-2 top face (下水位)
+// 注意：step 6 已经定义了 water2Top 变量，但由于 scope 隔离，需重新获取
+const ghostFaceStep9 = document.getElementById("water-level-ghost-top");
+const water2TopStep9 = document.getElementById("water-2-top");
+
+if (ghostFaceStep9) {
+    ghostFaceStep9.setAttribute("stroke-width", "3");
+    ghostFaceStep9.setAttribute("stroke", "#ef4444"); // 亮红
+}
+if (water2TopStep9) {
+    water2TopStep9.setAttribute("stroke-width", "3");
+    water2TopStep9.setAttribute("stroke", "#ef4444"); // 亮红
+}
 </script>
 
 <script id="script_step_10">
 // ==========================================
-// Step 10: 确定圆锥的高 (h=4cm)
-// 使用 drawAuxiliaryLabel 绘制内部辅助线
+// Step 10: 视觉关联 (圆锥体积 = 下降水体积)
 // ==========================================
 
-drawAuxiliaryLabel({
-    id: "label-cone-h",
-    p1: { x: 0, y: 0, z: 0 },     // 底面中心
-    p2: { x: 0, y: H_TRI, z: 0 }, // 顶点
-    text: "h=4cm",
-    centerX: CX_RIGHT, centerY: CY,
+const highlightFill = "rgba(245, 158, 11, 0.5)"; // 橙色半透明
+
+// 1. 高亮左侧圆锥
+const coneBody = document.getElementById("cone-obj-body-face");
+const coneBase = document.getElementById("cone-obj-base-face");
+if (coneBody) coneBody.setAttribute("fill", highlightFill);
+if (coneBase) coneBase.setAttribute("fill", highlightFill);
+
+// 2. 高亮右侧下降区域 (Gap)
+const H_DROP = 30; // 必须与 step 6 定义的一致 (100 - 70)
+
+drawCylinder({
+    id: "drop-volume-hl",
+    x: 0, y: 0, z: 0,
+    r: R_CYL, h: H_DROP,
+    // 定位到 H_WATER_2 之上
+    centerX: CX_R, centerY: CY - (H_WATER_1 - H_DROP), 
     projectFn: Projections.FRONT,
     styles: {
-        fontSize: 16,
-        stroke: "#dc2626",        // 红色线条
-        strokeWidth: 2.5,
-        auxiliaryDashArray: "6,4",   // 虚线样式
-        textFill: "#dc2626",      // 红色文字
-        haloStroke: "white",
-        haloWidth: 4,
-        textOffset: 12            // 文字稍微偏离轴线
+        faceFill: highlightFill,
+        edgeStroke: "#f59e0b",
+        edgeDashArray: "4,4" // 虚线边框表示虚拟体积
     }
 });
-autoAvoidOverlap(svg)
+// 移除 drop-volume-hl 的顶底面描边，避免干扰
+const dropTop = document.getElementById("drop-volume-hl-top");
+const dropBottomFront = document.getElementById("drop-volume-hl-bottom-front");
+const dropBottomBack = document.getElementById("drop-volume-hl-bottom-back");
+if (dropTop) dropTop.setAttribute("stroke", "none");
+if (dropBottomFront) dropBottomFront.setAttribute("stroke", "none");
+if (dropBottomBack) dropBottomBack.setAttribute("stroke", "none");
+
+// 确保标注在最上层
+const dimDropGroup = document.getElementById("dim-drop");
+if (dimDropGroup) dimDropGroup.parentNode.appendChild(dimDropGroup);
 </script>
 
-<script id="script_step_11">
+<script id="script_step_15">
 // ==========================================
-// Step 11: 确定圆锥底面半径 (r=3cm)
-// 使用 drawAuxiliaryLabel 绘制内部辅助线
+// Step 15: 替换圆锥标注 (直径 -> 半径)
 // ==========================================
 
+// 1. 隐藏旧标注
+const oldConeD = document.getElementById("lbl-cone-d");
+if (oldConeD) oldConeD.style.display = "none";
+
+// 2. 绘制新标注：半径 r = 10cm
+// 修正：使用琥珀色，虚线绘制，且 textOffset 增大至 15 避免压线
 drawAuxiliaryLabel({
-    id: "label-cone-r",
-    p1: { x: 0, y: 0, z: 0 },     // 圆心
-    p2: { x: R_TRI, y: 0, z: 0 }, // 右侧边缘
-    text: "r=3cm",
-    centerX: CX_RIGHT, centerY: CY,
+    id: "lbl-cone-r",
+    p1: { x: 0, y: 0, z: 0 },
+    p2: { x: R_CONE, y: 0, z: 0 },
+    text: "r = 10cm",
+    centerX: CX_L, centerY: CY,
     projectFn: Projections.FRONT,
     styles: {
-        fontSize: 16,
-        stroke: "#dc2626",        // 红色线条
-        strokeWidth: 2.5,
-        auxiliaryDashArray: "6,4",   // 虚线样式
-        textFill: "#dc2626",      // 红色文字
-        haloStroke: "white",
-        haloWidth: 4,
-        textOffset: 15            // 文字向上偏移
-    }
-});
-autoAvoidOverlap(svg)
-</script>
-
-<script id="script_step_18">
-// ==========================================
-// Step 18: 标注计算出的体积 (V=37.68cm³)
-// 使用 drawTextLabel 进行纯文字标注
-// ==========================================
-
-drawTextLabel({
-    id: "label-cone-vol",
-    text: "V=37.68cm³",
-    x: 0, y: -20, z: 0, // 放置在圆锥底面下方
-    centerX: CX_RIGHT, centerY: CY,
-    projectFn: Projections.FRONT,
-    styles: {
-        textFill: "#b45309", // 深橙色
-        fontSize: 18,
-        haloStroke: "white",
-        haloWidth: 4,
-        dy: 40, // 进一步向下偏移，避免与底面重叠
+        stroke: "#fbbf24",       // Amber
+        textFill: "#fbbf24",
+        auxiliaryDashArray: "4,4", // 虚线
+        textOffset: 15,          // 向下移动
         anchor: "middle"
     }
 });
-autoAvoidOverlap(svg)
+</script>
+
+<script id="script_step_16">
+// ==========================================
+// Step 16: 高亮圆锥半径和高
+// ==========================================
+
+const hlColor = "#ef4444"; // 红色 (Red)
+
+// 高亮半径
+const rText = document.getElementById("lbl-cone-r-text");
+const rLine = document.getElementById("lbl-cone-r-line");
+if (rText) {
+    rText.setAttribute("fill", hlColor);
+    rText.setAttribute("font-weight", "bold");
+}
+if (rLine) rLine.setAttribute("stroke", hlColor);
+
+// 高亮高
+const hText = document.getElementById("lbl-cone-h-text");
+const hLine = document.getElementById("lbl-cone-h-line");
+if (hText) {
+    hText.setAttribute("fill", hlColor);
+    hText.setAttribute("font-weight", "bold");
+}
+if (hLine) hLine.setAttribute("stroke", hlColor);
+</script>
+
+<script id="script_step_22">
+// ==========================================
+// Step 22: 替换圆柱标注 (直径 -> 半径)
+// ==========================================
+
+// 1. 隐藏旧标注
+const oldCylD = document.getElementById("lbl-cyl-d");
+if (oldCylD) oldCylD.style.display = "none";
+
+// 2. 绘制新标注：半径 R = 20cm
+// 画在上底面
+const H_CONTAINER_CONST = 140; // Copy from Step 5
+
+drawAuxiliaryLabel({
+    id: "lbl-cyl-r",
+    p1: { x: 0, y: H_CONTAINER_CONST, z: 0 },
+    p2: { x: R_CYL, y: H_CONTAINER_CONST, z: 0 },
+    text: "R = 20cm",
+    centerX: CX_L, centerY: CY,
+    projectFn: Projections.FRONT,
+    styles: {
+        stroke: "#1e3a8a", // 深蓝
+        textFill: "#1e3a8a",
+        auxiliaryDashArray: null,
+        textOffset: -8
+    }
+});
+</script>
+
+<script id="script_step_28">
+// ==========================================
+// Step 28: 更新计算结果
+// ==========================================
+
+const finalText = document.getElementById("dim-drop-text");
+if (finalText) {
+    finalText.textContent = "1.25 cm";
+    finalText.setAttribute("fill", "#16a34a"); // 绿色
+    finalText.setAttribute("font-weight", "bold");
+}
 </script>
 ```
 

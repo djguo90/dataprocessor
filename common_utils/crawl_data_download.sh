@@ -63,12 +63,10 @@
 # 资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_6
 # 资源教育部-辅学offline_20251217_doubao-seed-1-6-thinking-250615_纪贤松_xsji4_1114攻关_junior_sm_7"
 
-tasks="资源教育部-辅学-图形化讲解_214_gemini-3-pro-preview-thinking_郭冬杰_1768307427079-小数单模-立体几何_试标_phase2爬取输入_part001_p1v4_p2v4
-资源教育部-辅学-图形化讲解_215_gemini-3-pro-preview-thinking_郭冬杰_1768307427995-小数单模-立体几何_训练集_phase2爬取输入_part001_p1v4_p2v4
-资源教育部-辅学-图形化讲解_216_gemini-3-pro-preview-thinking_郭冬杰_1768307429820-小数单模-立体几何_训练集_phase2爬取输入_part002_p1v4_p2v4
-资源教育部-辅学-图形化讲解_217_gemini-3-pro-preview-thinking_郭冬杰_1768307431290-小数单模-立体几何_训练集_phase2爬取输入_part003_p1v4_p2v4
-资源教育部-辅学-图形化讲解_218_gemini-3-pro-preview-thinking_郭冬杰_1768307433299-小数单模-立体几何_训练集_phase2爬取输入_part004_p1v4_p2v4
-资源教育部-辅学-图形化讲解_219_gemini-3-pro-preview-thinking_郭冬杰_1768307435187-小数单模-立体几何_训练集_phase2爬取输入_part005_p1v4_p2v4"
+tasks="资源教育部-辅学-图形化讲解_317_gemini-3-pro-preview-thinking_郭冬杰_1768733869025-小数单模-立体几何_试标_phase2爬取输入_part001_p1v5_p2v5
+资源教育部-辅学-图形化讲解_318_gemini-3-pro-preview-thinking_郭冬杰_1768733869611-小数单模-立体几何_训练集_phase2爬取输入_part003_p1v5_p2v5
+资源教育部-辅学-图形化讲解_319_gemini-3-pro-preview-thinking_郭冬杰_1768733870589-小数单模-立体几何_训练集_phase2爬取输入_part004_p1v5_p2v5
+资源教育部-辅学-图形化讲解_320_gemini-3-pro-preview-thinking_郭冬杰_1768733872405-小数单模-立体几何_训练集_phase2爬取输入_part005_p1v5_p2v5"
 
 save_dir=/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/3.phase2爬取输出_v2
 

@@ -57,7 +57,7 @@ except Exception as exc:  # pragma: no cover
 # ------- 可配置变量（放在最前，便于手工调整；均可被命令行覆盖） -------
 SOURCE_JSON_PATH = Path(
     # r"/mnt/pan8T/temp_yhzou6/数学图形化讲解/files_yhzou/标注数据补充_1225/补充数据_data_1225_一二阶段融合1_matched_1133.jsonl"
-    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式_v2/小数单模-立体几何_试标_manim可处理格式_part001_p1v4_p2v4_matched_196.json"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式_v2/小数单模-立体几何_训练集_manim可处理格式_part003_p1v5_p2v5_matched_469.json"
 )
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v5-prompt测试\svg-stage2-2d-gemini-v5_100_matched_98.json")
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3.5-平台标注500题-fixed-20251204\svg-stage2-2d-gemini-v3.5_500_matched_489.json")
@@ -71,10 +71,10 @@ SOURCE_JSON_PATH = Path(
 
 
 QUESTION_BANK_PATH = Path(
-    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式_v2/小数单模-立体几何_试标_manim可处理格式_part001_p1v4_p2v4_matched_196.json"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/4.manim可处理格式_v2/小数单模-立体几何_训练集_manim可处理格式_part003_p1v5_p2v5_matched_469.json"
 )
 OUTPUT_ROOT = Path(
-    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果_v2/小数单模-立体几何_试标_manim可处理格式_part001_p1v4_p2v4_matched_196"
+    r"/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果_v2/小数单模-立体几何_训练集_manim可处理格式_part003_p1v5_p2v5_matched_469"
 )
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3-平台试标100题\code-test")
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3-平台试标100题\code")
@@ -83,7 +83,8 @@ DEFAULT_WORKERS = 10
 # 可选：包含 / 排除 ID 列表文件（每行一个 id），置None则不生效
 INCLUDE_ID_PATH: Path | None = None
 # INCLUDE_ID_PATH: Path | None = "/mnt/pan8T/temp_djguo/math_xx_sm_svg/正式生产/数据/小数单模-立体几何/4.manim可处理格式/ids.txt"
-EXCLUDE_ID_PATH: Path | None = None
+# EXCLUDE_ID_PATH: Path | None = None
+EXCLUDE_ID_PATH: Path | None = "/mnt/pan8T/temp_djguo/dataprocessor/data/图形化讲解/小数单模-立体几何/5.视频结果_v2/小数单模-立体几何_训练集_视频结果_part003_p1v5_p2v5_matched_469.bakcup/rendered_ids.txt"
 # Path(r"D:\github\svg_exp\svg-stage2\平面几何\v3-平台标注500题-20251201\svg-stage2-2d-gemini-v3_500_matched_377_ids.txt")
 
 
@@ -706,7 +707,7 @@ def generate_manim_py(
                 )
                 # ✅ 每一步都从同一个锚点开始放
                 lines.append("            text_line.move_to(text_anchor, aligned_edge=UL)")
-                lines.append("            self.play(Write(text_line), run_time=tracker.duration * 0.4)")
+                lines.append("            self.play(Write(text_line), run_time=tracker.duration * 0.01)")
                 lines.append("            text_items.add(text_line)")
 
             lines.append("            self.wait(1e-3)")
@@ -725,7 +726,7 @@ def generate_manim_py(
                 )
                 # ✅ 每一步都从同一个锚点开始放
                 lines.append("            text_line.move_to(text_anchor, aligned_edge=UL)")
-                lines.append("            self.play(Write(text_line), run_time=tracker.duration * 0.4)")
+                lines.append("            self.play(Write(text_line), run_time=tracker.duration * 0.01)")
                 lines.append("            text_items.add(text_line)")
 
             lines.append("            self.wait(1e-3)")

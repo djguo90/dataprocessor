@@ -676,7 +676,7 @@
          * @param {Function} [config.projectFn=Projections.FRONT] - 投影函数（圆柱/圆锥默认 FRONT）
          * @param {Object} [config.styles] - 样式配置
          */
-        function drawCylinder(config) {
+         function drawCylinder(config) {
             const {
                 id,
                 x, y, z, r, h,
@@ -687,7 +687,9 @@
             const s = { ...DEFAULT_STYLES, ...styles };
             const segments = (typeof s.segments === "number" && s.segments >= 12) ? s.segments : 72;
 
-            // ---- 样式应用工具：可见/不可见边、面 ----
+            // ---- 样式应用工具 ----
+
+            // 1. 可见边样式（用于轮廓线）
             const applyVisibleStroke = (el) => {
                 el.setAttribute("stroke", s.edgeStroke);
                 el.setAttribute("stroke-width", s.edgeWidth);
@@ -699,6 +701,7 @@
                 }
             };
 
+            // 2. 不可见边样式（用于被遮挡的线）
             const applyHiddenStroke = (el) => {
                 const hs = (s.hiddenStroke != null) ? s.hiddenStroke : s.edgeStroke;
                 const hw = (s.hiddenWidth != null) ? s.hiddenWidth : s.edgeWidth;
@@ -710,26 +713,16 @@
                 if (ho != null) el.setAttribute("stroke-opacity", ho);
                 if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
                 if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-                if (s.edgeLinejoin === "miter" && s.edgeMiterlimit != null) {
-                    el.setAttribute("stroke-miterlimit", s.edgeMiterlimit);
-                }
                 if (hd) el.setAttribute("stroke-dasharray", hd);
             };
 
+            // 3. 面样式（只负责填充，描边默认为 none）
             const applyFaceFill = (el) => {
                 el.setAttribute("fill", s.faceFill);
                 if (s.faceOpacity != null) el.setAttribute("fill-opacity", s.faceOpacity);
-
-                // 面描边（可选）
-                if (s.faceStroke && s.faceStroke !== "none" && (s.faceStrokeWidth || 0) > 0) {
-                    el.setAttribute("stroke", s.faceStroke);
-                    el.setAttribute("stroke-width", s.faceStrokeWidth);
-                    if (s.faceStrokeOpacity != null) el.setAttribute("stroke-opacity", s.faceStrokeOpacity);
-                    if (s.edgeLinecap) el.setAttribute("stroke-linecap", s.edgeLinecap);
-                    if (s.edgeLinejoin) el.setAttribute("stroke-linejoin", s.edgeLinejoin);
-                } else {
-                    el.setAttribute("stroke", "none");
-                }
+                
+                // 强制面本身无描边，实现“面”与“线”的分离
+                el.setAttribute("stroke", "none");
             };
 
             // 1) 生成顶面/底面投影点
@@ -753,7 +746,7 @@
                 if (p.px > bottomPts[maxIdx].px) maxIdx = i;
             });
 
-            // 3) 弧线 path 数据
+            // 3) 弧线 path 数据工具
             const getArcD = (pts, startIdx, endIdx) => {
                 let d = `M ${pts[startIdx].px},${pts[startIdx].py}`;
                 let i = startIdx;
@@ -764,7 +757,7 @@
                 return d;
             };
 
-            // 4) 判断前后弧（通过两段中点 py）
+            // 4) 判断前后弧
             const midIdxA = Math.floor((minIdx < maxIdx ? (minIdx + maxIdx) : (minIdx + maxIdx + segments)) / 2) % segments;
             const midIdxB = Math.floor((maxIdx < minIdx ? (maxIdx + minIdx) : (maxIdx + minIdx + segments)) / 2) % segments;
 
@@ -781,18 +774,17 @@
             }
 
             // =========================
-            // (A) 面：底面/侧面/顶面（补齐 id）
+            // (A) 面：底面/侧面/顶面 (填充层)
             // =========================
 
-            // A1) 底面 face——放在最底层
+            // A1) 底面 face
             const bottomFace = document.createElementNS(SVG_NS, "polygon");
             bottomFace.setAttribute("id", `${id}-bottom-face`);
             bottomFace.setAttribute("points", bottomPts.map(p => `${p.px},${p.py}`).join(" "));
             applyFaceFill(bottomFace);
             g.appendChild(bottomFace);
 
-            // A2) 侧面 face（补齐：以前 sidePoly 没 id）
-            // 逻辑：沿“底面前弧”走一圈，再沿“顶面前弧”反向回来，形成侧面可见区域
+            // A2) 侧面 face
             const sidePolyPoints = [];
             let curr = frontStart;
             while (true) {
@@ -810,28 +802,18 @@
             const sideFace = document.createElementNS(SVG_NS, "polygon");
             sideFace.setAttribute("id", `${id}-side-face`);
             sideFace.setAttribute("points", sidePolyPoints.map(p => `${p.px},${p.py}`).join(" "));
-            sideFace.setAttribute("fill", s.faceFill);
-            if (s.faceOpacity != null) sideFace.setAttribute("fill-opacity", s.faceOpacity);
-            sideFace.setAttribute("stroke", "none");
+            applyFaceFill(sideFace); // 统一使用 applyFaceFill
             g.appendChild(sideFace);
 
-            // A3) 顶面 face（已有 id：top-face）
+            // A3) 顶面 face (修改：仅填充，无描边)
             const topFace = document.createElementNS(SVG_NS, "polygon");
             topFace.setAttribute("id", `${id}-top-face`);
             topFace.setAttribute("points", topPts.map(p => `${p.px},${p.py}`).join(" "));
-            topFace.setAttribute("fill", s.faceFill);
-            if (s.faceOpacity != null) topFace.setAttribute("fill-opacity", s.faceOpacity);
-
-            // 顶面边界通常要显示：这里用可见边样式描边（不依赖 faceStroke）
-            topFace.setAttribute("stroke", s.edgeStroke);
-            topFace.setAttribute("stroke-width", s.edgeWidth);
-            if (s.edgeOpacity != null) topFace.setAttribute("stroke-opacity", s.edgeOpacity);
-            if (s.edgeLinecap) topFace.setAttribute("stroke-linecap", s.edgeLinecap);
-            if (s.edgeLinejoin) topFace.setAttribute("stroke-linejoin", s.edgeLinejoin);
+            applyFaceFill(topFace); // 此时 stroke="none"
             g.appendChild(topFace);
 
             // =========================
-            // (B) 边：底面前后弧 + 侧棱
+            // (B) 边：线框层 (Stroke Only)
             // =========================
 
             // B1) 底面后弧（hidden）
@@ -853,15 +835,23 @@
             // B3) 侧棱（左右两条）
             [minIdx, maxIdx].forEach((idx, i) => {
                 const line = document.createElementNS(SVG_NS, "line");
-                line.setAttribute("id", `${id}-side-${i}`);
+                line.setAttribute("id", `${id}-side-${i}`); // 稍微优化了ID命名
                 line.setAttribute("x1", topPts[idx].px);    line.setAttribute("y1", topPts[idx].py);
                 line.setAttribute("x2", bottomPts[idx].px); line.setAttribute("y2", bottomPts[idx].py);
                 applyVisibleStroke(line);
                 g.appendChild(line);
             });
 
+            // B4) 顶面边框 (新增：独立 ID，独立描边)
+            const topEdge = document.createElementNS(SVG_NS, "polygon");
+            topEdge.setAttribute("id", `${id}-top`); // 独立的 ID
+            topEdge.setAttribute("points", topPts.map(p => `${p.px},${p.py}`).join(" "));
+            topEdge.setAttribute("fill", "none");
+            applyVisibleStroke(topEdge); // 应用标准可见边样式
+            g.appendChild(topEdge);
+
             // =========================
-            // (C) 调试点：中心点（可选）
+            // (C) 调试点与顶点
             // =========================
             if (s.showCenters) {
                 const topCenter = projectFn(x, y + h, z, config);
@@ -874,7 +864,6 @@
                     c.setAttribute("cy", pt.py);
                     c.setAttribute("r", s.centerRadius || 3);
                     c.setAttribute("fill", s.centerFill || "#e11d48");
-                    c.setAttribute("opacity", 1);
                     return c;
                 };
 
@@ -882,11 +871,7 @@
                 g.appendChild(mk(topCenter, `${id}-center-top`));
             }
 
-            // =========================
-            // (D) 顶点（可选）
-            // =========================
             if (s.showVertices) {
-                // 保留你原来的关键点策略 + 补齐样式字段
                 const topCenter = projectFn(x, y + h, z, config);
                 const bottomCenter = projectFn(x, y, z, config);
 
@@ -905,13 +890,7 @@
                     circle.setAttribute("r", s.vertexRadius);
                     circle.setAttribute("fill", s.vertexFill);
                     if (s.vertexOpacity != null) circle.setAttribute("fill-opacity", s.vertexOpacity);
-
-                    if (s.vertexStroke && s.vertexStroke !== "none" && (s.vertexStrokeWidth || 0) > 0) {
-                        circle.setAttribute("stroke", s.vertexStroke);
-                        circle.setAttribute("stroke-width", s.vertexStrokeWidth);
-                    } else {
-                        circle.setAttribute("stroke", "none");
-                    }
+                    circle.setAttribute("stroke", "none"); // 顶点通常也无边框
                     g.appendChild(circle);
                 });
             }
@@ -1050,23 +1029,23 @@
             g.appendChild(baseFace);
 
             // A2) 主体 fill（补齐：以前没有 id）
-            if (s.faceFill && s.faceFill !== "none") {
-                const polyPts = [apex];
-                let curr = frontStart;
-                while (true) {
-                    polyPts.push(basePts[curr]);
-                    if (curr === frontEnd) break;
-                    curr = (curr + 1) % segments;
-                }
-
-                const bodyFace = document.createElementNS(SVG_NS, "polygon");
-                bodyFace.setAttribute("id", `${id}-body-face`);
-                bodyFace.setAttribute("points", polyPts.map(p => `${p.px},${p.py}`).join(" "));
-                bodyFace.setAttribute("fill", s.faceFill);
-                if (s.faceOpacity != null) bodyFace.setAttribute("fill-opacity", s.faceOpacity);
-                bodyFace.setAttribute("stroke", "none");
-                g.appendChild(bodyFace);
+            // if (s.faceFill && s.faceFill !== "none") {
+            const polyPts = [apex];
+            let curr = frontStart;
+            while (true) {
+                polyPts.push(basePts[curr]);
+                if (curr === frontEnd) break;
+                curr = (curr + 1) % segments;
             }
+
+            const bodyFace = document.createElementNS(SVG_NS, "polygon");
+            bodyFace.setAttribute("id", `${id}-body-face`);
+            bodyFace.setAttribute("points", polyPts.map(p => `${p.px},${p.py}`).join(" "));
+            bodyFace.setAttribute("fill", s.faceFill);
+            if (s.faceOpacity != null) bodyFace.setAttribute("fill-opacity", s.faceOpacity);
+            bodyFace.setAttribute("stroke", "none");
+            g.appendChild(bodyFace);
+            // }
 
             // =========================
             // (B) 边：底面后弧/前弧 + 两条母线
